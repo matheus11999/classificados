@@ -1,0 +1,609 @@
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Classificados Regionais - PWA</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        whatsapp: '#25D366',
+                        primary: '#059669',
+                        secondary: '#334155'
+                    },
+                    fontFamily: {
+                        'inter': ['Inter', 'system-ui', 'sans-serif']
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.3s ease-in-out',
+                        'slide-up': 'slideUp 0.3s ease-out',
+                        'bounce-gentle': 'bounceGentle 0.5s ease-out'
+                    }
+                }
+            },
+            darkMode: 'class'
+        };
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        @keyframes bounceGentle {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-5px); }
+            60% { transform: translateY(-3px); }
+        }
+        
+        .scroll-smooth {
+            scroll-behavior: smooth;
+        }
+        
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        
+        .dark .card-hover:hover {
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 dark:bg-gray-900 font-inter text-gray-900 dark:text-gray-100 transition-colors duration-300 min-h-screen pb-20">
+    <!-- @COMPONENT: Header -->
+    <header class="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 sticky top-0 z-40 transition-colors duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- @COMPONENT: Logo -->
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-gradient-to-br from-primary to-emerald-400 rounded-xl flex items-center justify-center">
+                        <i class="fas fa-tag text-white text-lg"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold text-gray-900 dark:text-white">Classificados</h1>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Regionais</p>
+                    </div>
+                </div>
+                
+                <!-- @COMPONENT: Actions -->
+                <div class="flex items-center space-x-3">
+                    <!-- @COMPONENT: DarkModeToggle -->
+                    <button id="darkModeToggle" class="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                        <i class="fas fa-moon dark:hidden text-gray-600"></i>
+                        <i class="fas fa-sun hidden dark:block text-yellow-400"></i>
+                    </button>
+                    
+                    <!-- @COMPONENT: NotificationButton -->
+                    <button class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors relative">
+                        <i class="fas fa-bell text-gray-600 dark:text-gray-300"></i>
+                        <span class="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></span>
+                    </button>
+                    
+                    <!-- @COMPONENT: UserAvatar -->
+                    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                        <i class="fas fa-user text-white text-sm"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+    <!-- @END_COMPONENT: Header -->
+
+    <!-- @COMPONENT: SearchSection -->
+    <section class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 transition-colors duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div class="space-y-4">
+                <!-- @COMPONENT: SearchBar -->
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fas fa-search text-gray-400"></i>
+                    </div>
+                    <input type="text" placeholder="Buscar produtos, serviços..." 
+                           class="block w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all">
+                </div>
+                
+                <!-- @COMPONENT: FilterChips -->
+                <div class="flex space-x-3 overflow-x-auto pb-2">
+                    <button class="flex-shrink-0 px-4 py-2 bg-primary text-white rounded-full text-sm font-medium">
+                        <i class="fas fa-map-marker-alt mr-2"></i>Todas as regiões
+                    </button>
+                    <button class="flex-shrink-0 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                        <i class="fas fa-car mr-2"></i>Veículos
+                    </button>
+                    <button class="flex-shrink-0 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                        <i class="fas fa-home mr-2"></i>Imóveis
+                    </button>
+                    <button class="flex-shrink-0 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                        <i class="fas fa-laptop mr-2"></i>Eletrônicos
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- @END_COMPONENT: SearchSection -->
+
+    <!-- @COMPONENT: MainContent -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
+        <!-- @COMPONENT: FeaturedSection -->
+        <section class="animate-fade-in">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Anúncios em Destaque</h2>
+                <button class="text-primary hover:text-primary/80 font-medium text-sm">Ver todos</button>
+            </div>
+            
+            <!-- @COMPONENT: FeaturedAdsGrid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- @MAP: featuredAds.map(ad => ( -->
+                <!-- Featured Ad Card 1 -->
+                <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden card-hover">
+                    <!-- iPhone 13 Pro Max image -->
+                    <img src="https://images.unsplash.com/photo-1592750475338-74b7b21085ab?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=240" 
+                         alt="iPhone 13 Pro Max" class="w-full h-48 object-cover" data-mock="true">
+                    
+                    <div class="p-5">
+                        <div class="flex items-start justify-between mb-3">
+                            <div class="flex-1">
+                                <h3 class="font-semibold text-gray-900 dark:text-white text-lg mb-1" data-bind="ad.title">iPhone 13 Pro Max 256GB</h3>
+                                <p class="text-2xl font-bold text-primary" data-bind="ad.price">R$ 4.200</p>
+                            </div>
+                            <button class="text-gray-400 hover:text-red-500 transition-colors">
+                                <i class="far fa-heart text-xl"></i>
+                            </button>
+                        </div>
+                        
+                        <p class="text-gray-600 dark:text-gray-300 text-sm mb-4 line-clamp-2" data-bind="ad.description" data-mock="true">
+                            Estado impecável, com caixa e todos os acessórios originais. Sem riscos ou marcas de uso.
+                        </p>
+                        
+                        <div class="flex items-center text-sm text-gray-500 dark:text-gray-400 mb-4">
+                            <i class="fas fa-map-marker-alt mr-2"></i>
+                            <span data-bind="ad.location" data-mock="true">Centro, São Paulo - SP</span>
+                            <span class="mx-2">•</span>
+                            <span data-bind="ad.timeAgo" data-mock="true">2h atrás</span>
+                        </div>
+                        
+                        <!-- @COMPONENT: WhatsAppButton -->
+                        <button data-event="click:openWhatsApp" data-bind="ad.whatsapp" 
+                                class="w-full bg-whatsapp hover:bg-whatsapp/90 text-white font-medium py-3 px-4 rounded-xl transition-all duration-200 flex items-center justify-center space-x-2 hover:shadow-lg">
+                            <i class="fab fa-whatsapp text-lg"></i>
+                            <span>Entrar em Contato</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Featured Ad Card 2 -->
+                <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden card-hover">
+                    <!-- Bicycle image -->
+                    <img src="https://pixabay.com/get/g892647508c3fd3cb3ddf2fde38c00eacd3d8afd5b89f9a958cd4d205595352614e85df41277c74271c613beb99906adec256a13d9ae4f0d441a09b1e5c70fe4b_1280.jpg" 
+                         alt="Bicicleta Mountain Bike" class="w-full h-48 object-cover" data-mock="true">
+                    
+                    <div class="p-5">
+                        <div class="flex items-start justify-between mb-3">
+                            <div class="flex-1">
+                                <h3 class="font-semibold text-gray-900 dark:text-white text-lg mb-1" data-bind="ad.title">Bicicleta Mountain Bike Aro 29</h3>
+                                <p class="text-2xl font-bold text-primary" data-bind="ad.price">R$ 850</p>
+                            </div>
+                            <button class="text-red-500">
+                                <i class="fas fa-heart text-xl"></i>
+                            </button>
+                        </div>
+                        
+                        <p class="text-gray-600 dark:text-gray-300 text-sm mb-4 line-clamp-2" data-bind="ad.description" data-mock="true">
+                            Bike semi-nova, 21 marchas Shimano, freios a disco. Ideal para trilhas e uso urbano.
+                        </p>
+                        
+                        <div class="flex items-center text-sm text-gray-500 dark:text-gray-400 mb-4">
+                            <i class="fas fa-map-marker-alt mr-2"></i>
+                            <span data-bind="ad.location" data-mock="true">Vila Madalena, São Paulo - SP</span>
+                            <span class="mx-2">•</span>
+                            <span data-bind="ad.timeAgo" data-mock="true">5h atrás</span>
+                        </div>
+                        
+                        <button data-event="click:openWhatsApp" data-bind="ad.whatsapp" 
+                                class="w-full bg-whatsapp hover:bg-whatsapp/90 text-white font-medium py-3 px-4 rounded-xl transition-all duration-200 flex items-center justify-center space-x-2 hover:shadow-lg">
+                            <i class="fab fa-whatsapp text-lg"></i>
+                            <span>Entrar em Contato</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Featured Ad Card 3 -->
+                <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden card-hover">
+                    <!-- Sofa image -->
+                    <img src="https://images.unsplash.com/photo-1586023492125-27b2c045efd7?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=240" 
+                         alt="Sofá 3 lugares" class="w-full h-48 object-cover" data-mock="true">
+                    
+                    <div class="p-5">
+                        <div class="flex items-start justify-between mb-3">
+                            <div class="flex-1">
+                                <h3 class="font-semibold text-gray-900 dark:text-white text-lg mb-1" data-bind="ad.title">Sofá 3 Lugares Cinza</h3>
+                                <p class="text-2xl font-bold text-primary" data-bind="ad.price">R$ 1.200</p>
+                            </div>
+                            <button class="text-gray-400 hover:text-red-500 transition-colors">
+                                <i class="far fa-heart text-xl"></i>
+                            </button>
+                        </div>
+                        
+                        <p class="text-gray-600 dark:text-gray-300 text-sm mb-4 line-clamp-2" data-bind="ad.description" data-mock="true">
+                            Sofá em excelente estado, tecido de qualidade, muito confortável. Motivo da venda: mudança.
+                        </p>
+                        
+                        <div class="flex items-center text-sm text-gray-500 dark:text-gray-400 mb-4">
+                            <i class="fas fa-map-marker-alt mr-2"></i>
+                            <span data-bind="ad.location" data-mock="true">Perdizes, São Paulo - SP</span>
+                            <span class="mx-2">•</span>
+                            <span data-bind="ad.timeAgo" data-mock="true">1 dia atrás</span>
+                        </div>
+                        
+                        <button data-event="click:openWhatsApp" data-bind="ad.whatsapp" 
+                                class="w-full bg-whatsapp hover:bg-whatsapp/90 text-white font-medium py-3 px-4 rounded-xl transition-all duration-200 flex items-center justify-center space-x-2 hover:shadow-lg">
+                            <i class="fab fa-whatsapp text-lg"></i>
+                            <span>Entrar em Contato</span>
+                        </button>
+                    </div>
+                </div>
+                <!-- @END_MAP )) -->
+            </div>
+        </section>
+        <!-- @END_COMPONENT: FeaturedSection -->
+
+        <!-- @COMPONENT: RecentAdsSection -->
+        <section class="animate-fade-in">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Anúncios Recentes</h2>
+                <button class="text-primary hover:text-primary/80 font-medium text-sm">Ver todos</button>
+            </div>
+            
+            <!-- @COMPONENT: RecentAdsGrid -->
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <!-- @MAP: recentAds.map(ad => ( -->
+                <!-- Recent Ad Card 1 -->
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden card-hover">
+                    <!-- Gaming setup image -->
+                    <img src="https://pixabay.com/get/g740d888aa2456975d2d29efb6f7f5a1e6d107f49080c834927633f933d6208085f60086f2b6323d913a2b71278c6b4ce10c374f2a71921e12bab29dbd357fe59_1280.jpg" 
+                         alt="Setup Gamer Completo" class="w-full h-32 object-cover" data-mock="true">
+                    
+                    <div class="p-3">
+                        <h3 class="font-medium text-gray-900 dark:text-white text-sm mb-1 line-clamp-1" data-bind="ad.title">Setup Gamer Completo</h3>
+                        <p class="text-primary font-bold text-lg mb-2" data-bind="ad.price">R$ 3.500</p>
+                        <p class="text-gray-500 dark:text-gray-400 text-xs mb-3" data-bind="ad.location" data-mock="true">Mooca, SP</p>
+                        
+                        <button data-event="click:openWhatsApp" data-bind="ad.whatsapp" 
+                                class="w-full bg-whatsapp hover:bg-whatsapp/90 text-white font-medium py-2 px-3 rounded-lg transition-all duration-200 flex items-center justify-center space-x-1 text-sm">
+                            <i class="fab fa-whatsapp"></i>
+                            <span>Contato</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Recent Ad Card 2 -->
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden card-hover">
+                    <!-- Sneakers image -->
+                    <img src="https://images.unsplash.com/photo-1549298916-b41d501d3772?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&h=160" 
+                         alt="Tênis Nike Air Max" class="w-full h-32 object-cover" data-mock="true">
+                    
+                    <div class="p-3">
+                        <h3 class="font-medium text-gray-900 dark:text-white text-sm mb-1 line-clamp-1" data-bind="ad.title">Tênis Nike Air Max 42</h3>
+                        <p class="text-primary font-bold text-lg mb-2" data-bind="ad.price">R$ 320</p>
+                        <p class="text-gray-500 dark:text-gray-400 text-xs mb-3" data-bind="ad.location" data-mock="true">Ipiranga, SP</p>
+                        
+                        <button data-event="click:openWhatsApp" data-bind="ad.whatsapp" 
+                                class="w-full bg-whatsapp hover:bg-whatsapp/90 text-white font-medium py-2 px-3 rounded-lg transition-all duration-200 flex items-center justify-center space-x-1 text-sm">
+                            <i class="fab fa-whatsapp"></i>
+                            <span>Contato</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Recent Ad Card 3 -->
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden card-hover">
+                    <!-- Washing machine image -->
+                    <img src="https://images.unsplash.com/photo-1626806787461-102c1bfaaea1?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&h=160" 
+                         alt="Máquina de Lavar" class="w-full h-32 object-cover" data-mock="true">
+                    
+                    <div class="p-3">
+                        <h3 class="font-medium text-gray-900 dark:text-white text-sm mb-1 line-clamp-1" data-bind="ad.title">Máquina de Lavar 12kg</h3>
+                        <p class="text-primary font-bold text-lg mb-2" data-bind="ad.price">R$ 980</p>
+                        <p class="text-gray-500 dark:text-gray-400 text-xs mb-3" data-bind="ad.location" data-mock="true">Santana, SP</p>
+                        
+                        <button data-event="click:openWhatsApp" data-bind="ad.whatsapp" 
+                                class="w-full bg-whatsapp hover:bg-whatsapp/90 text-white font-medium py-2 px-3 rounded-lg transition-all duration-200 flex items-center justify-center space-x-1 text-sm">
+                            <i class="fab fa-whatsapp"></i>
+                            <span>Contato</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Recent Ad Card 4 -->
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden card-hover">
+                    <!-- Camera image -->
+                    <img src="https://images.unsplash.com/photo-1502920917128-1aa500764cbd?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&h=160" 
+                         alt="Câmera DSLR Canon" class="w-full h-32 object-cover" data-mock="true">
+                    
+                    <div class="p-3">
+                        <h3 class="font-medium text-gray-900 dark:text-white text-sm mb-1 line-clamp-1" data-bind="ad.title">Câmera Canon EOS T7i</h3>
+                        <p class="text-primary font-bold text-lg mb-2" data-bind="ad.price">R$ 2.100</p>
+                        <p class="text-gray-500 dark:text-gray-400 text-xs mb-3" data-bind="ad.location" data-mock="true">Liberdade, SP</p>
+                        
+                        <button data-event="click:openWhatsApp" data-bind="ad.whatsapp" 
+                                class="w-full bg-whatsapp hover:bg-whatsapp/90 text-white font-medium py-2 px-3 rounded-lg transition-all duration-200 flex items-center justify-center space-x-1 text-sm">
+                            <i class="fab fa-whatsapp"></i>
+                            <span>Contato</span>
+                        </button>
+                    </div>
+                </div>
+                <!-- @END_MAP )) -->
+            </div>
+        </section>
+        <!-- @END_COMPONENT: RecentAdsSection -->
+
+        <!-- @COMPONENT: CategorySection -->
+        <section class="animate-fade-in">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Categorias Populares</h2>
+            </div>
+            
+            <!-- @COMPONENT: CategoryGrid -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <!-- @MAP: categories.map(category => ( -->
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 text-center shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer card-hover">
+                    <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-car text-white text-2xl"></i>
+                    </div>
+                    <h3 class="font-semibold text-gray-900 dark:text-white mb-1" data-bind="category.name">Veículos</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400" data-bind="category.count" data-mock="true">1.234 anúncios</p>
+                </div>
+                
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 text-center shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer card-hover">
+                    <div class="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-home text-white text-2xl"></i>
+                    </div>
+                    <h3 class="font-semibold text-gray-900 dark:text-white mb-1" data-bind="category.name">Imóveis</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400" data-bind="category.count" data-mock="true">567 anúncios</p>
+                </div>
+                
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 text-center shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer card-hover">
+                    <div class="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-laptop text-white text-2xl"></i>
+                    </div>
+                    <h3 class="font-semibold text-gray-900 dark:text-white mb-1" data-bind="category.name">Eletrônicos</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400" data-bind="category.count" data-mock="true">890 anúncios</p>
+                </div>
+                
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 text-center shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer card-hover">
+                    <div class="w-16 h-16 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-couch text-white text-2xl"></i>
+                    </div>
+                    <h3 class="font-semibold text-gray-900 dark:text-white mb-1" data-bind="category.name">Móveis</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400" data-bind="category.count" data-mock="true">456 anúncios</p>
+                </div>
+                <!-- @END_MAP )) -->
+            </div>
+        </section>
+        <!-- @END_COMPONENT: CategorySection -->
+    </main>
+    <!-- @END_COMPONENT: MainContent -->
+
+    <!-- @COMPONENT: FloatingActionButton -->
+    <button class="fixed bottom-24 right-6 w-14 h-14 bg-primary hover:bg-primary/90 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center z-30 animate-bounce-gentle">
+        <i class="fas fa-plus text-xl"></i>
+    </button>
+    <!-- @END_COMPONENT: FloatingActionButton -->
+
+    <!-- @COMPONENT: BottomNavigation -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 z-40 transition-colors duration-300">
+        <div class="flex justify-around items-center py-2">
+            <!-- @COMPONENT: NavItem -->
+            <button class="flex flex-col items-center justify-center px-3 py-2 text-primary" data-active="true">
+                <i class="fas fa-home text-2xl mb-1"></i>
+                <span class="text-xs font-medium">Início</span>
+            </button>
+            
+            <button class="flex flex-col items-center justify-center px-3 py-2 text-gray-500 dark:text-gray-400 hover:text-primary transition-colors">
+                <i class="fas fa-plus text-2xl mb-1"></i>
+                <span class="text-xs font-medium">Criar</span>
+            </button>
+            
+            <button class="flex flex-col items-center justify-center px-3 py-2 text-gray-500 dark:text-gray-400 hover:text-primary transition-colors">
+                <i class="fas fa-folder text-2xl mb-1"></i>
+                <span class="text-xs font-medium">Meus Anúncios</span>
+            </button>
+            
+            <button class="flex flex-col items-center justify-center px-3 py-2 text-gray-500 dark:text-gray-400 hover:text-primary transition-colors">
+                <i class="fas fa-user text-2xl mb-1"></i>
+                <span class="text-xs font-medium">Perfil</span>
+            </button>
+            <!-- @END_COMPONENT: NavItem -->
+        </div>
+    </nav>
+    <!-- @END_COMPONENT: BottomNavigation -->
+
+    <!-- @COMPONENT: CreateAdModal (Hidden by default) -->
+    <div id="createAdModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+        <div class="flex items-end justify-center min-h-screen px-4 pt-4 pb-20 text-center">
+            <div class="bg-white dark:bg-gray-800 rounded-t-2xl p-6 w-full max-w-lg animate-slide-up">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-xl font-bold text-gray-900 dark:text-white">Criar Anúncio</h3>
+                    <button id="closeModal" class="text-gray-400 hover:text-gray-600 transition-colors">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                
+                <form class="space-y-4">
+                    <!-- @COMPONENT: FormField -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Título do anúncio</label>
+                        <input type="text" placeholder="Ex: iPhone 13 Pro Max" 
+                               class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Preço</label>
+                        <input type="text" placeholder="R$ 0,00" 
+                               class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Categoria</label>
+                        <select class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all">
+                            <option>Selecionar categoria</option>
+                            <option>Eletrônicos</option>
+                            <option>Veículos</option>
+                            <option>Imóveis</option>
+                            <option>Móveis</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Descrição</label>
+                        <textarea rows="3" placeholder="Descreva seu produto..." 
+                                  class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all resize-none"></textarea>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Foto do produto</label>
+                        <div class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6 text-center hover:border-primary transition-colors cursor-pointer">
+                            <i class="fas fa-cloud-upload-alt text-3xl text-gray-400 mb-2"></i>
+                            <p class="text-gray-500 dark:text-gray-400">Clique para adicionar uma foto</p>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" 
+                            class="w-full bg-primary hover:bg-primary/90 text-white font-medium py-3 px-4 rounded-xl transition-all duration-200 flex items-center justify-center space-x-2">
+                        <i class="fas fa-plus"></i>
+                        <span>Publicar Anúncio</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <!-- @END_COMPONENT: CreateAdModal -->
+
+    <script>
+        (function() {
+            // TODO: Implement React component state management and API integration
+            
+            // Dark mode toggle functionality
+            const darkModeToggle = document.getElementById('darkModeToggle');
+            const html = document.documentElement;
+            
+            // Check for saved theme preference or default to light mode
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            if (savedTheme === 'dark') {
+                html.classList.add('dark');
+            }
+            
+            darkModeToggle.addEventListener('click', () => {
+                html.classList.toggle('dark');
+                const currentTheme = html.classList.contains('dark') ? 'dark' : 'light';
+                localStorage.setItem('theme', currentTheme);
+            });
+            
+            // Create Ad Modal functionality
+            const createAdModal = document.getElementById('createAdModal');
+            const closeModal = document.getElementById('closeModal');
+            const createButtons = document.querySelectorAll('[data-event*="createAd"], .fixed.bottom-24');
+            
+            createButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    createAdModal.classList.remove('hidden');
+                    document.body.style.overflow = 'hidden';
+                });
+            });
+            
+            closeModal.addEventListener('click', () => {
+                createAdModal.classList.add('hidden');
+                document.body.style.overflow = 'auto';
+            });
+            
+            // Close modal when clicking outside
+            createAdModal.addEventListener('click', (e) => {
+                if (e.target === createAdModal) {
+                    createAdModal.classList.add('hidden');
+                    document.body.style.overflow = 'auto';
+                }
+            });
+            
+            // WhatsApp contact functionality
+            const whatsappButtons = document.querySelectorAll('[data-event*="openWhatsApp"]');
+            whatsappButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    // TODO: Get actual phone number from ad data
+                    const phoneNumber = '5511999999999'; // Mock phone number
+                    const message = encodeURIComponent('Olá! Vi seu anúncio e tenho interesse no produto.');
+                    window.open(`https://wa.me/${phoneNumber}?text=${message}`, '_blank');
+                });
+            });
+            
+            // Navigation functionality
+            const navButtons = document.querySelectorAll('nav button');
+            navButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    // Remove active state from all buttons
+                    navButtons.forEach(btn => {
+                        btn.classList.remove('text-primary');
+                        btn.classList.add('text-gray-500', 'dark:text-gray-400');
+                        btn.removeAttribute('data-active');
+                    });
+                    
+                    // Add active state to clicked button
+                    button.classList.remove('text-gray-500', 'dark:text-gray-400');
+                    button.classList.add('text-primary');
+                    button.setAttribute('data-active', 'true');
+                    
+                    // TODO: Implement actual navigation logic with React Router
+                });
+            });
+            
+            // Smooth scroll behavior
+            document.documentElement.classList.add('scroll-smooth');
+            
+            // PWA Installation prompt
+            let deferredPrompt;
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredPrompt = e;
+                // TODO: Show custom install button
+            });
+            
+            // Service Worker registration
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/sw.js')
+                    .then((registration) => {
+                        console.log('SW registered: ', registration);
+                    })
+                    .catch((registrationError) => {
+                        console.log('SW registration failed: ', registrationError);
+                    });
+            }
+            
+            // Add loading states to buttons
+            document.addEventListener('click', (e) => {
+                if (e.target.tagName === 'BUTTON' && e.target.type === 'submit') {
+                    e.target.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Processando...';
+                    // TODO: Remove loading state after API response
+                }
+            });
+            
+        })();
+    </script>
+</body>
+</html>

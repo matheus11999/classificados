@@ -50,8 +50,14 @@ app.use((req, res, next) => {
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
+  if (process.env.NODE_ENV === "development") {
+    try {
+      await setupVite(app, server);
+    } catch (error) {
+      console.error("Failed to setup Vite:", error);
+      console.log("Falling back to static serving...");
+      serveStatic(app);
+    }
   } else {
     serveStatic(app);
   }

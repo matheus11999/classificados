@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { Home, Plus, Folder, User } from "lucide-react";
+import { Home, Plus, User } from "lucide-react";
 
 export default function BottomNavigation() {
   const [location, setLocation] = useLocation();
@@ -18,15 +18,9 @@ export default function BottomNavigation() {
       testId: "nav-create",
     },
     {
-      path: "/my-ads",
-      icon: Folder,
-      label: "Meus Anúncios",
-      testId: "nav-my-ads",
-    },
-    {
       path: "/profile",
       icon: User,
-      label: "Perfil",
+      label: "Info",
       testId: "nav-profile",
     },
   ];

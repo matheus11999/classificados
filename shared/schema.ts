@@ -13,8 +13,7 @@ import {
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Session storage table.
-// (IMPORTANT) This table is mandatory for Replit Auth, don't drop it.
+// Session storage table for session management
 export const sessions = pgTable(
   "sessions",
   {
@@ -25,10 +24,9 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
-// User storage table.
-// (IMPORTANT) This table is mandatory for Replit Auth, don't drop it.
+// User storage table (optional - only used if authentication is implemented)
 export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   email: varchar("email").unique(),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
@@ -54,7 +52,7 @@ export const ads = pgTable("ads", {
   categoryId: uuid("category_id").references(() => categories.id),
   location: varchar("location", { length: 200 }).notNull(),
   whatsapp: varchar("whatsapp", { length: 20 }).notNull(),
-  userId: varchar("user_id").references(() => users.id).notNull(),
+  userId: uuid("user_id").references(() => users.id), // Optional - null if no auth
   featured: boolean("featured").default(false),
   active: boolean("active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
@@ -63,7 +61,7 @@ export const ads = pgTable("ads", {
 
 export const favorites = pgTable("favorites", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").references(() => users.id).notNull(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
   adId: uuid("ad_id").references(() => ads.id).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -115,13 +113,13 @@ export const insertCategorySchema = createInsertSchema(categories).omit({
 
 export const insertAdSchema = createInsertSchema(ads).omit({
   id: true,
-  userId: true,
   createdAt: true,
   updatedAt: true,
   featured: true,
   active: true,
 }).extend({
   price: z.string().min(1, "Preço é obrigatório"),
+  userId: z.string().optional(), // Made optional
 });
 
 export const insertFavoriteSchema = createInsertSchema(favorites).omit({

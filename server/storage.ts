@@ -38,7 +38,7 @@ export interface IStorage {
     offset?: number;
   }): Promise<AdWithDetails[]>;
   getAdById(id: string): Promise<AdWithDetails | undefined>;
-  createAd(ad: InsertAd, userId: string): Promise<Ad>;
+  createAd(ad: InsertAd, userId: string | null): Promise<Ad>;
   updateAd(id: string, ad: Partial<InsertAd>, userId: string): Promise<Ad | undefined>;
   deleteAd(id: string, userId: string): Promise<boolean>;
   
@@ -217,7 +217,7 @@ export class DatabaseStorage implements IStorage {
     return result as AdWithDetails | undefined;
   }
 
-  async createAd(ad: InsertAd, userId: string): Promise<Ad> {
+  async createAd(ad: InsertAd, userId: string | null): Promise<Ad> {
     const [newAd] = await db
       .insert(ads)
       .values({
