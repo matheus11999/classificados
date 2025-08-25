@@ -3,7 +3,8 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./auth";
 import { createDefaultAdmin, authenticateAdmin, generateAdminToken, isAdminAuthenticated } from "./admin-auth";
-import { insertAdSchema, insertFavoriteSchema } from "@shared/schema";
+import { authenticateUser, registerUser, generateUserToken, requireAuth } from "./user-auth";
+import { insertAdSchema, insertFavoriteSchema, loginUserSchema, registerUserSchema } from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -46,22 +47,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
     await storage.setSetting("contact_email", "contato@marketplace.com");
     await storage.setSetting("contact_phone", "");
     await storage.setSetting("allow_registrations", "true", "boolean");
+    await storage.setSetting("max_ads_per_user", "10", "number");
+    await storage.setSetting("ad_duration_days", "30", "number");
   } catch (error) {
     console.log("Default settings initialization error:", error);
   }
 
-  // Auth routes
-  app.get('/api/auth/user', async (req: any, res) => {
+  // User authentication routes
+  app.post('/api/auth/login', async (req, res) => {
     try {
-      if (!req.isAuthenticated()) {
-        return res.json(null);
+      const validatedData = loginUserSchema.parse(req.body);
+      const user = await authenticateUser(validatedData.username, validatedData.password);
+      
+      if (!user) {
+        return res.status(401).json({ message: "Credenciais inválidas" });
       }
-      const userId = req.user.claims.sub;
+      
+      const token = generateUserToken(user);
+      const { password, ...userWithoutPassword } = user;
+      
+      res.json({
+        token,
+        user: userWithoutPassword
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
+      }
+      console.error("Login error:", error);
+      res.status(500).json({ message: "Erro interno do servidor" });
+    }
+  });
+
+  app.post('/api/auth/register', async (req, res) => {
+    try {
+      const allowRegistrations = await storage.getSetting("allow_registrations");
+      if (allowRegistrations?.value !== "true") {
+        return res.status(403).json({ message: "Registros não permitidos" });
+      }
+
+      const validatedData = registerUserSchema.parse(req.body);
+      const user = await registerUser(validatedData);
+      
+      if (!user) {
+        return res.status(400).json({ message: "Erro ao criar usuário" });
+      }
+      
+      const token = generateUserToken(user);
+      const { password, ...userWithoutPassword } = user;
+      
+      // Create welcome notification
+      await storage.createNotification({
+        userId: user.id,
+        title: "Bem-vindo!",
+        message: "Sua conta foi criada com sucesso. Você já pode começar a anunciar!",
+        type: "success"
+      });
+      
+      res.status(201).json({
+        token,
+        user: userWithoutPassword
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
+      }
+      console.error("Register error:", error);
+      res.status(500).json({ message: "Erro interno do servidor" });
+    }
+  });
+
+  app.get('/api/auth/user', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
-      res.json(user);
+      if (!user) {
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+      const { password, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
     } catch (error) {
       console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
+      res.status(500).json({ message: "Erro ao buscar usuário" });
     }
   });
 
@@ -111,61 +178,226 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const ad = await storage.getAdById(id);
       
       if (!ad) {
-        return res.status(404).json({ message: "Ad not found" });
+        return res.status(404).json({ message: "Anúncio não encontrado" });
       }
+
+      // Increment view count
+      await storage.incrementAdViews(id);
 
       res.json(ad);
     } catch (error) {
       console.error("Error fetching ad:", error);
-      res.status(500).json({ message: "Failed to fetch ad" });
+      res.status(500).json({ message: "Erro ao buscar anúncio" });
     }
   });
 
-  app.post('/api/ads', async (req: any, res) => {
+  app.post('/api/ads', requireAuth, async (req: any, res) => {
     try {
-      const validatedData = insertAdSchema.parse(req.body);
+      const userId = req.user.id;
+      const validatedData = insertAdSchema.parse({
+        ...req.body,
+        userId
+      });
       
-      // Create ad without user authentication (anonymous posting)
-      const ad = await storage.createAd(validatedData, null);
+      // Check user limits
+      const user = await storage.getUser(userId);
+      const maxAdsPerUser = await storage.getSetting("max_ads_per_user");
+      const maxAds = parseInt(maxAdsPerUser?.value || "10");
+      
+      if (user && parseInt(user.activeAdsCount) >= maxAds) {
+        return res.status(403).json({ 
+          message: `Limite de ${maxAds} anúncios ativos atingido` 
+        });
+      }
+      
+      const ad = await storage.createAd(validatedData);
+      
+      // Create notification
+      await storage.createNotification({
+        userId,
+        title: "Anúncio criado!",
+        message: `Seu anúncio "${ad.title}" foi criado com sucesso`,
+        type: "success",
+        adId: ad.id
+      });
+      
       res.status(201).json(ad);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+        return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
       }
       console.error("Error creating ad:", error);
-      res.status(500).json({ message: "Failed to create ad" });
+      res.status(500).json({ message: "Erro ao criar anúncio" });
     }
   });
 
-  // Admin routes - disabled since no auth
-  app.patch('/api/ads/:id', (req: any, res) => {
-    res.status(501).json({ message: "Editing ads disabled - authentication required" });
+  // User ad management routes
+  app.get('/api/user/ads', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const ads = await storage.getUserAds(userId);
+      res.json(ads);
+    } catch (error) {
+      console.error("Error fetching user ads:", error);
+      res.status(500).json({ message: "Erro ao buscar seus anúncios" });
+    }
   });
 
-  app.delete('/api/ads/:id', (req: any, res) => {
-    res.status(501).json({ message: "Deleting ads disabled - authentication required" });
+  app.patch('/api/ads/:id', requireAuth, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.id;
+      const updateData = req.body;
+      
+      const ad = await storage.updateAd(id, updateData, userId);
+      
+      if (!ad) {
+        return res.status(404).json({ message: "Anúncio não encontrado ou sem permissão" });
+      }
+      
+      res.json(ad);
+    } catch (error) {
+      console.error("Error updating ad:", error);
+      res.status(500).json({ message: "Erro ao atualizar anúncio" });
+    }
   });
 
-  // User ads route - disabled since no auth
-  app.get('/api/user/ads', (req: any, res) => {
-    res.status(501).json({ message: "User ads disabled - authentication required" });
+  app.delete('/api/ads/:id', requireAuth, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.id;
+      
+      const deleted = await storage.deleteAd(id, userId);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Anúncio não encontrado ou sem permissão" });
+      }
+      
+      // Create notification
+      await storage.createNotification({
+        userId,
+        title: "Anúncio pausado",
+        message: "Seu anúncio foi pausado com sucesso",
+        type: "info",
+        adId: id
+      });
+      
+      res.json({ message: "Anúncio pausado com sucesso" });
+    } catch (error) {
+      console.error("Error deleting ad:", error);
+      res.status(500).json({ message: "Erro ao pausar anúncio" });
+    }
   });
 
-  // Favorites routes - disabled since no auth
-  app.get('/api/favorites', (req: any, res) => {
-    res.json([]);
+  // User management routes
+  app.put('/api/user/profile', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const updateData = req.body;
+      
+      // Remove sensitive fields that shouldn't be updated via this route
+      delete updateData.password;
+      delete updateData.activeAdsCount;
+      delete updateData.active;
+      
+      const user = await storage.updateUser(userId, updateData);
+      
+      if (!user) {
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+      
+      const { password, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      res.status(500).json({ message: "Erro ao atualizar perfil" });
+    }
   });
 
-  app.post('/api/favorites', (req: any, res) => {
-    res.status(501).json({ message: "Favorites disabled - authentication required" });
+  // Notifications routes
+  app.get('/api/notifications', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const notifications = await storage.getUserNotifications(userId);
+      res.json(notifications);
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+      res.status(500).json({ message: "Erro ao buscar notificações" });
+    }
   });
 
-  app.delete('/api/favorites/:adId', (req: any, res) => {
-    res.status(501).json({ message: "Favorites disabled - authentication required" });
+  app.patch('/api/notifications/:id/read', requireAuth, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.id;
+      
+      const updated = await storage.markNotificationAsRead(id, userId);
+      
+      if (!updated) {
+        return res.status(404).json({ message: "Notificação não encontrada" });
+      }
+      
+      res.json({ message: "Notificação marcada como lida" });
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+      res.status(500).json({ message: "Erro ao marcar notificação como lida" });
+    }
   });
 
-  app.get('/api/favorites/:adId/check', (req: any, res) => {
-    res.json({ isFavorited: false });
+  // Favorites routes
+  app.get('/api/favorites', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const favorites = await storage.getFavorites(userId);
+      res.json(favorites);
+    } catch (error) {
+      console.error("Error fetching favorites:", error);
+      res.status(500).json({ message: "Erro ao buscar favoritos" });
+    }
+  });
+
+  app.post('/api/favorites', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { adId } = req.body;
+      
+      const favorite = await storage.addToFavorites(adId, userId);
+      res.status(201).json(favorite);
+    } catch (error) {
+      console.error("Error adding to favorites:", error);
+      res.status(500).json({ message: "Erro ao adicionar aos favoritos" });
+    }
+  });
+
+  app.delete('/api/favorites/:adId', requireAuth, async (req: any, res) => {
+    try {
+      const { adId } = req.params;
+      const userId = req.user.id;
+      
+      const removed = await storage.removeFromFavorites(adId, userId);
+      
+      if (!removed) {
+        return res.status(404).json({ message: "Favorito não encontrado" });
+      }
+      
+      res.json({ message: "Removido dos favoritos" });
+    } catch (error) {
+      console.error("Error removing from favorites:", error);
+      res.status(500).json({ message: "Erro ao remover dos favoritos" });
+    }
+  });
+
+  app.get('/api/favorites/:adId/check', requireAuth, async (req: any, res) => {
+    try {
+      const { adId } = req.params;
+      const userId = req.user.id;
+      
+      const isFavorited = await storage.isAdFavorited(adId, userId);
+      res.json({ isFavorited });
+    } catch (error) {
+      console.error("Error checking favorite status:", error);
+      res.status(500).json({ message: "Erro ao verificar favorito" });
+    }
   });
 
   // Admin authentication routes

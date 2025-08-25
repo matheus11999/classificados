@@ -5,8 +5,10 @@ import {
   favorites,
   adminUsers,
   siteSettings,
+  notifications,
   type User,
   type UpsertUser,
+  type RegisterUser,
   type Ad,
   type InsertAd,
   type AdWithDetails,
@@ -18,6 +20,8 @@ import {
   type InsertAdminUser,
   type SiteSetting,
   type InsertSiteSetting,
+  type Notification,
+  type InsertNotification,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql, ilike, or } from "drizzle-orm";
@@ -25,13 +29,18 @@ import { eq, desc, and, sql, ilike, or } from "drizzle-orm";
 // Interface for storage operations
 export interface IStorage {
   // User operations
-  // (IMPORTANT) these user operations are mandatory for Replit Auth.
   getUser(id: string): Promise<User | undefined>;
+  getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  createUser(user: RegisterUser): Promise<User>;
+  updateUser(id: string, user: Partial<User>): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
   
   // Category operations
   getCategories(): Promise<Category[]>;
   createCategory(category: InsertCategory): Promise<Category>;
+  updateCategory(id: string, category: Partial<InsertCategory>): Promise<Category | undefined>;
+  deleteCategory(id: string): Promise<boolean>;
   
   // Ad operations
   getAds(options?: {
@@ -44,15 +53,22 @@ export interface IStorage {
     offset?: number;
   }): Promise<AdWithDetails[]>;
   getAdById(id: string): Promise<AdWithDetails | undefined>;
-  createAd(ad: InsertAd, userId: string | null): Promise<Ad>;
+  createAd(ad: InsertAd): Promise<Ad>;
   updateAd(id: string, ad: Partial<InsertAd>, userId: string): Promise<Ad | undefined>;
   deleteAd(id: string, userId: string): Promise<boolean>;
+  incrementAdViews(id: string): Promise<void>;
+  getUserAds(userId: string): Promise<AdWithDetails[]>;
   
   // Favorites operations
   getFavorites(userId: string): Promise<AdWithDetails[]>;
   addToFavorites(adId: string, userId: string): Promise<Favorite>;
   removeFromFavorites(adId: string, userId: string): Promise<boolean>;
   isAdFavorited(adId: string, userId: string): Promise<boolean>;
+  
+  // Notifications operations
+  getUserNotifications(userId: string): Promise<Notification[]>;
+  createNotification(notification: InsertNotification): Promise<Notification>;
+  markNotificationAsRead(id: string, userId: string): Promise<boolean>;
   
   // Admin operations
   getAdminByEmail(email: string): Promise<AdminUser | undefined>;
@@ -72,10 +88,35 @@ export interface IStorage {
 
 export class DatabaseStorage implements IStorage {
   // User operations
-  // (IMPORTANT) these user operations are mandatory for Replit Auth.
-
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
+  }
+
+  async createUser(userData: RegisterUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(userData)
+      .returning();
+    return user;
+  }
+
+  async updateUser(id: string, userData: Partial<User>): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({ ...userData, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
     return user;
   }
 
@@ -105,6 +146,23 @@ export class DatabaseStorage implements IStorage {
       .values(category)
       .returning();
     return newCategory;
+  }
+
+  async updateCategory(id: string, categoryData: Partial<InsertCategory>): Promise<Category | undefined> {
+    const [category] = await db
+      .update(categories)
+      .set(categoryData)
+      .where(eq(categories.id, id))
+      .returning();
+    return category;
+  }
+
+  async deleteCategory(id: string): Promise<boolean> {
+    const [category] = await db
+      .delete(categories)
+      .where(eq(categories.id, id))
+      .returning();
+    return !!category;
   }
 
   // Ad operations
@@ -238,16 +296,88 @@ export class DatabaseStorage implements IStorage {
     return result as AdWithDetails | undefined;
   }
 
-  async createAd(ad: InsertAd, userId: string | null): Promise<Ad> {
+  async createAd(ad: InsertAd): Promise<Ad> {
+    // Get ad duration setting
+    const durationSetting = await this.getSetting("ad_duration_days");
+    const durationDays = parseInt(durationSetting?.value || "30");
+    
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + durationDays);
+    
     const [newAd] = await db
       .insert(ads)
       .values({
         ...ad,
-        userId,
         price: ad.price.toString(),
+        expiresAt,
       })
       .returning();
+    
+    // Update user's active ads count
+    await db
+      .update(users)
+      .set({ 
+        activeAdsCount: sql`${users.activeAdsCount} + 1`,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, ad.userId));
+    
     return newAd;
+  }
+
+  async getUserAds(userId: string): Promise<AdWithDetails[]> {
+    const result = await db
+      .select({
+        id: ads.id,
+        title: ads.title,
+        description: ads.description,
+        price: ads.price,
+        imageUrl: ads.imageUrl,
+        categoryId: ads.categoryId,
+        location: ads.location,
+        whatsapp: ads.whatsapp,
+        userId: ads.userId,
+        featured: ads.featured,
+        active: ads.active,
+        views: ads.views,
+        expiresAt: ads.expiresAt,
+        createdAt: ads.createdAt,
+        updatedAt: ads.updatedAt,
+        user: {
+          id: users.id,
+          username: users.username,
+          email: users.email,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          profileImageUrl: users.profileImageUrl,
+          whatsapp: users.whatsapp,
+          createdAt: users.createdAt,
+          updatedAt: users.updatedAt,
+        },
+        category: {
+          id: categories.id,
+          name: categories.name,
+          icon: categories.icon,
+          createdAt: categories.createdAt,
+        },
+      })
+      .from(ads)
+      .leftJoin(users, eq(ads.userId, users.id))
+      .leftJoin(categories, eq(ads.categoryId, categories.id))
+      .where(eq(ads.userId, userId))
+      .orderBy(desc(ads.createdAt));
+
+    return result as AdWithDetails[];
+  }
+
+  async incrementAdViews(id: string): Promise<void> {
+    await db
+      .update(ads)
+      .set({ 
+        views: sql`${ads.views} + 1`,
+        updatedAt: new Date()
+      })
+      .where(eq(ads.id, id));
   }
 
   async updateAd(id: string, ad: Partial<InsertAd>, userId: string): Promise<Ad | undefined> {
@@ -268,6 +398,18 @@ export class DatabaseStorage implements IStorage {
       .set({ active: false, updatedAt: new Date() })
       .where(and(eq(ads.id, id), eq(ads.userId, userId)))
       .returning();
+    
+    if (deletedAd) {
+      // Update user's active ads count
+      await db
+        .update(users)
+        .set({ 
+          activeAdsCount: sql`${users.activeAdsCount} - 1`,
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, userId));
+    }
+    
     return !!deletedAd;
   }
 
@@ -469,6 +611,32 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(siteSettings)
       .orderBy(siteSettings.key);
+  }
+
+  // Notifications operations
+  async getUserNotifications(userId: string): Promise<Notification[]> {
+    return await db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.userId, userId))
+      .orderBy(desc(notifications.createdAt));
+  }
+
+  async createNotification(notificationData: InsertNotification): Promise<Notification> {
+    const [notification] = await db
+      .insert(notifications)
+      .values(notificationData)
+      .returning();
+    return notification;
+  }
+
+  async markNotificationAsRead(id: string, userId: string): Promise<boolean> {
+    const [notification] = await db
+      .update(notifications)
+      .set({ read: true })
+      .where(and(eq(notifications.id, id), eq(notifications.userId, userId)))
+      .returning();
+    return !!notification;
   }
 }
 

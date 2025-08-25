@@ -211,6 +211,37 @@ Execute `npm run db:push` para aplicar o esquema no banco.
 - [ ] Integração com pagamentos
 - [ ] Sistema de entrega/logística
 
+## Deploy Automatizado 🚀
+
+### Processo de Commit e Deploy
+**SEMPRE** seguir estes passos após implementar novas funcionalidades:
+
+1. **Commit das Alterações**
+```bash
+git add .
+git commit -m "Descrição das alterações
+
+🤖 Generated with [Claude Code](https://claude.ai/code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>"
+git push
+```
+
+2. **Acionar Deploy Automático**
+```bash
+curl -X GET "http://89.28.236.67:3000/api/deploy/43556f2e6831c6b993ae52949a4f9938b7b44d914b7c3b6a"
+```
+
+### Webhook de Deploy
+- **URL**: `http://89.28.236.67:3000/api/deploy/43556f2e6831c6b993ae52949a4f9938b7b44d914b7c3b6a`
+- **Método**: GET
+- **Resposta**: `"Deploying..."`
+- **Ação**: Baixa código do GitHub e reconstrói container Docker
+
+### ⚠️ Problemas Conhecidos de Deploy
+- **"no space left on device"** - Erro de espaço em disco no servidor
+- **Solução**: Aguardar limpeza automática do servidor ou contactar administrador
+
 ## 🎉 Status Final
 **MARKETPLACE PWA 100% FUNCIONAL EM PRODUÇÃO!**
 

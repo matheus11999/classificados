@@ -7,6 +7,7 @@ import Layout from "@/components/Layout";
 import Home from "@/pages/Home";
 import CreateAd from "@/pages/CreateAd";
 import Profile from "@/pages/Profile";
+import Login from "@/pages/Login";
 import AdminLogin from "@/pages/AdminLogin";
 import AdminDashboard from "@/pages/AdminDashboard";
 import NotFound from "@/pages/not-found";
@@ -28,6 +29,9 @@ function Router() {
         <Layout>
           <Profile />
         </Layout>
+      </Route>
+      <Route path="/login">
+        <Login />
       </Route>
       <Route path="/admin/login">
         <AdminLogin />
