@@ -25,6 +25,8 @@ interface SettingsState {
   contact_email: string;
   contact_phone: string;
   allow_registrations: boolean;
+  max_ads_per_user: string;
+  ad_duration_days: string;
 }
 
 export default function AdminSettings() {
@@ -36,6 +38,8 @@ export default function AdminSettings() {
     contact_email: "",
     contact_phone: "",
     allow_registrations: true,
+    max_ads_per_user: "10",
+    ad_duration_days: "30",
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -159,6 +163,40 @@ export default function AdminSettings() {
                   placeholder="Marketplace de produtos e serviços"
                   rows={3}
                 />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="max_ads_per_user">Máximo de Anúncios por Usuário</Label>
+                  <Input
+                    id="max_ads_per_user"
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={settings.max_ads_per_user || "10"}
+                    onChange={(e) => handleInputChange('max_ads_per_user', e.target.value)}
+                    placeholder="10"
+                  />
+                  <p className="text-sm text-gray-600">
+                    Limite de anúncios ativos por usuário
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="ad_duration_days">Duração dos Anúncios (dias)</Label>
+                  <Input
+                    id="ad_duration_days"
+                    type="number"
+                    min="1"
+                    max="365"
+                    value={settings.ad_duration_days || "30"}
+                    onChange={(e) => handleInputChange('ad_duration_days', e.target.value)}
+                    placeholder="30"
+                  />
+                  <p className="text-sm text-gray-600">
+                    Dias até o anúncio expirar automaticamente
+                  </p>
+                </div>
               </div>
 
               <div className="flex items-center justify-between">

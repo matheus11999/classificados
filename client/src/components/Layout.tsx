@@ -1,17 +1,62 @@
-import { ReactNode } from "react";
-import { useAuth } from "@/hooks/useAuth";
+import { ReactNode, useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import BottomNavigation from "./BottomNavigation";
 import { Button } from "@/components/ui/button";
-import { Moon, Sun, Bell, User } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Moon, Sun, Bell, User, LogIn, LogOut, Settings } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
+import { userAuth } from "@/lib/user-auth";
+import { useToast } from "@/hooks/use-toast";
 
 interface LayoutProps {
   children: ReactNode;
 }
 
 export default function Layout({ children }: LayoutProps) {
-  const { user } = useAuth();
+  const [, setLocation] = useLocation();
   const { theme, toggleTheme } = useTheme();
+  const { toast } = useToast();
+  const [user, setUser] = useState(userAuth.getUser());
+  const [notifications, setNotifications] = useState<any[]>([]);
+
+  useEffect(() => {
+    // Update user state when authentication changes
+    const checkAuth = () => {
+      setUser(userAuth.getUser());
+    };
+    
+    // Load notifications if user is authenticated
+    const loadNotifications = async () => {
+      if (userAuth.isAuthenticated()) {
+        try {
+          const userNotifications = await userAuth.getNotifications();
+          setNotifications(userNotifications);
+        } catch (error) {
+          console.error("Error loading notifications:", error);
+        }
+      }
+    };
+
+    checkAuth();
+    loadNotifications();
+
+    // Re-check periodically
+    const interval = setInterval(checkAuth, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleLogout = () => {
+    userAuth.logout();
+    setUser(null);
+    setNotifications([]);
+    toast({
+      title: "Logout realizado",
+      description: "Você foi desconectado com sucesso",
+    });
+    setLocation("/");
+  };
+
+  const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
     <div className="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300 min-h-screen pb-20">
@@ -47,29 +92,74 @@ export default function Layout({ children }: LayoutProps) {
                 )}
               </Button>
               
-              {/* Notification Button */}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 relative"
-                data-testid="button-notifications"
-              >
-                <Bell className="h-5 w-5 text-gray-600 dark:text-gray-300" />
-                <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></span>
-              </Button>
-              
-              {/* User Avatar */}
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center" data-testid="img-user-avatar">
-                {user?.profileImageUrl ? (
-                  <img
-                    src={user.profileImageUrl}
-                    alt="Avatar"
-                    className="w-full h-full rounded-full object-cover"
-                  />
-                ) : (
-                  <User className="h-4 w-4 text-white" />
-                )}
-              </div>
+              {user ? (
+                <>
+                  {/* Notification Button */}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 relative"
+                    onClick={() => setLocation("/profile")}
+                    data-testid="button-notifications"
+                  >
+                    <Bell className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </span>
+                    )}
+                  </Button>
+                  
+                  {/* User Menu */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="p-0">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center" data-testid="img-user-avatar">
+                          {user?.profileImageUrl ? (
+                            <img
+                              src={user.profileImageUrl}
+                              alt="Avatar"
+                              className="w-full h-full rounded-full object-cover"
+                            />
+                          ) : (
+                            <User className="h-4 w-4 text-white" />
+                          )}
+                        </div>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                      <div className="px-2 py-1.5 text-sm">
+                        <div className="font-medium">{user.firstName || user.username}</div>
+                        <div className="text-xs text-gray-500">{user.email}</div>
+                      </div>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => setLocation("/profile")}>
+                        <User className="mr-2 h-4 w-4" />
+                        Meu Dashboard
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setLocation("/create")}>
+                        <Settings className="mr-2 h-4 w-4" />
+                        Criar Anúncio
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={handleLogout}>
+                        <LogOut className="mr-2 h-4 w-4" />
+                        Sair
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setLocation("/login")}
+                  className="flex items-center space-x-2"
+                >
+                  <LogIn className="h-4 w-4" />
+                  <span>Entrar</span>
+                </Button>
+              )}
             </div>
           </div>
         </div>

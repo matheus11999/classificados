@@ -7,6 +7,51 @@ import { authenticateUser, registerUser, generateUserToken, requireAuth } from "
 import { insertAdSchema, insertFavoriteSchema, loginUserSchema, registerUserSchema } from "@shared/schema";
 import { z } from "zod";
 
+// Expired ads cleanup service
+function startExpiredAdsCleanup() {
+  const cleanupExpiredAds = async () => {
+    try {
+      console.log("Running expired ads cleanup...");
+      
+      // Get all expired ads that are still active
+      const expiredAds = await storage.getExpiredAds();
+      
+      for (const ad of expiredAds) {
+        // Mark ad as inactive
+        await storage.toggleAdStatus(ad.id, false);
+        
+        // Create notification for the user
+        if (ad.userId) {
+          await storage.createNotification({
+            userId: ad.userId,
+            title: "Anúncio expirou",
+            message: `Seu anúncio "${ad.title}" expirou e foi pausado automaticamente.`,
+            type: "warning",
+            adId: ad.id
+          });
+          
+          // Update user's active ads count
+          await storage.decrementUserAdsCount(ad.userId);
+        }
+      }
+      
+      if (expiredAds.length > 0) {
+        console.log(`Cleaned up ${expiredAds.length} expired ads`);
+      }
+    } catch (error) {
+      console.error("Error in expired ads cleanup:", error);
+    }
+  };
+
+  // Run cleanup immediately
+  cleanupExpiredAds();
+
+  // Run cleanup every hour
+  setInterval(cleanupExpiredAds, 60 * 60 * 1000);
+  
+  console.log("Expired ads cleanup service started");
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
@@ -37,6 +82,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Create default admin user
   await createDefaultAdmin();
+
+  // Start expired ads cleanup service
+  startExpiredAdsCleanup();
 
   // Initialize default settings
   try {
@@ -539,6 +587,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting ad:", error);
       res.status(500).json({ message: "Erro ao deletar anúncio" });
+    }
+  });
+
+  // Category management routes
+  app.post('/api/admin/categories', async (req: any, res) => {
+    try {
+      const { name, icon } = req.body;
+      
+      if (!name || !icon) {
+        return res.status(400).json({ message: "Nome e ícone são obrigatórios" });
+      }
+      
+      const category = await storage.createCategory({ name, icon });
+      res.status(201).json(category);
+    } catch (error) {
+      console.error("Error creating category:", error);
+      res.status(500).json({ message: "Erro ao criar categoria" });
+    }
+  });
+
+  app.put('/api/admin/categories/:id', async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { name, icon } = req.body;
+      
+      const category = await storage.updateCategory(id, { name, icon });
+      
+      if (!category) {
+        return res.status(404).json({ message: "Categoria não encontrada" });
+      }
+      
+      res.json(category);
+    } catch (error) {
+      console.error("Error updating category:", error);
+      res.status(500).json({ message: "Erro ao atualizar categoria" });
+    }
+  });
+
+  app.delete('/api/admin/categories/:id', async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteCategory(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Categoria não encontrada" });
+      }
+      
+      res.json({ message: "Categoria deletada com sucesso" });
+    } catch (error) {
+      console.error("Error deleting category:", error);
+      res.status(500).json({ message: "Erro ao deletar categoria" });
     }
   });
 

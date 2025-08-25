@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { adminAuth } from "@/lib/admin-auth";
 import AdminUsers from "@/components/admin/AdminUsers";
 import AdminAds from "@/components/admin/AdminAds";
+import AdminCategories from "@/components/admin/AdminCategories";
 import AdminSettings from "@/components/admin/AdminSettings";
 
 interface AdminStats {
@@ -150,9 +151,10 @@ function DashboardHome({ stats, loading }: { stats: AdminStats | null; loading: 
 
       {/* Management Tabs */}
       <Tabs defaultValue="users" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="users">Usuários</TabsTrigger>
           <TabsTrigger value="ads">Anúncios</TabsTrigger>
+          <TabsTrigger value="categories">Categorias</TabsTrigger>
           <TabsTrigger value="settings">Configurações</TabsTrigger>
         </TabsList>
         
@@ -162,6 +164,10 @@ function DashboardHome({ stats, loading }: { stats: AdminStats | null; loading: 
         
         <TabsContent value="ads" className="mt-6">
           <AdminAds />
+        </TabsContent>
+        
+        <TabsContent value="categories" className="mt-6">
+          <AdminCategories />
         </TabsContent>
         
         <TabsContent value="settings" className="mt-6">

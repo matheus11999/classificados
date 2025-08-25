@@ -84,6 +84,10 @@ export interface IStorage {
   getSetting(key: string): Promise<SiteSetting | undefined>;
   setSetting(key: string, value: string, type?: string): Promise<SiteSetting>;
   getAllSettings(): Promise<SiteSetting[]>;
+  
+  // Expired ads cleanup
+  getExpiredAds(): Promise<Ad[]>;
+  decrementUserAdsCount(userId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -637,6 +641,27 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(notifications.id, id), eq(notifications.userId, userId)))
       .returning();
     return !!notification;
+  }
+
+  // Expired ads cleanup methods
+  async getExpiredAds(): Promise<Ad[]> {
+    return await db
+      .select()
+      .from(ads)
+      .where(and(
+        eq(ads.active, true),
+        sql`${ads.expiresAt} < NOW()`
+      ));
+  }
+
+  async decrementUserAdsCount(userId: string): Promise<void> {
+    await db
+      .update(users)
+      .set({ 
+        activeAdsCount: sql`GREATEST(0, ${users.activeAdsCount} - 1)`,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, userId));
   }
 }
 

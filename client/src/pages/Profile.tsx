@@ -1,7 +1,24 @@
+import { useEffect } from "react";
+import { useLocation } from "wouter";
+import { userAuth } from "@/lib/user-auth";
+import UserDashboard from "./UserDashboard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Info, ShoppingCart, Users, Globe } from "lucide-react";
 
 export default function Profile() {
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (userAuth.isAuthenticated()) {
+      // User is authenticated, show dashboard
+      return;
+    }
+  }, []);
+
+  // If user is authenticated, show dashboard
+  if (userAuth.isAuthenticated()) {
+    return <UserDashboard />;
+  }
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
       <div className="flex items-center justify-between">

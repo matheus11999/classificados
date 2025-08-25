@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertAdSchema, type InsertAd } from "@shared/schema";
@@ -12,14 +13,38 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { CloudUpload, ArrowLeft } from "lucide-react";
-import { isUnauthorizedError } from "@/lib/authUtils";
+import { CloudUpload, ArrowLeft, AlertTriangle } from "lucide-react";
+import { userAuth } from "@/lib/user-auth";
 
 export default function CreateAd() {
   const [, setLocation] = useLocation();
   const [imagePreview, setImagePreview] = useState<string>("");
+  const [maxAds, setMaxAds] = useState(10);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  useEffect(() => {
+    // Check if user is authenticated
+    if (!userAuth.isAuthenticated()) {
+      setLocation("/login");
+      return;
+    }
+
+    // Load site settings to get max ads limit
+    const loadSettings = async () => {
+      try {
+        const response = await fetch('/api/settings');
+        const settings = await response.json();
+        if (settings.max_ads_per_user) {
+          setMaxAds(parseInt(settings.max_ads_per_user));
+        }
+      } catch (error) {
+        console.error("Error loading settings:", error);
+      }
+    };
+
+    loadSettings();
+  }, [setLocation]);
 
   const { data: categories = [] } = useQuery({
     queryKey: ["/api/categories"],
@@ -40,7 +65,10 @@ export default function CreateAd() {
 
   const createAdMutation = useMutation({
     mutationFn: async (data: InsertAd) => {
-      return await apiRequest("POST", "/api/ads", data);
+      return await userAuth.apiCall("/api/ads", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/ads"] });
@@ -51,25 +79,67 @@ export default function CreateAd() {
       });
       setLocation("/my-ads");
     },
-    onError: (error) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
+    onError: (error: any) => {
+      console.error("Failed to create ad:", error);
+      
       toast({
         title: "Erro ao criar anúncio",
-        description: "Não foi possível criar seu anúncio. Tente novamente.",
+        description: error.message || "Tente novamente em alguns instantes.",
         variant: "destructive",
       });
     },
   });
+
+  // Check if user can create more ads
+  const user = userAuth.getUser();
+  const canCreateAd = user ? userAuth.canCreateAd(maxAds) : false;
+  const activeAdsCount = user ? parseInt(user.activeAdsCount) : 0;
+
+  // Show limit warning if user is authenticated but not loaded yet
+  if (!user) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-2 text-sm text-gray-600">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!canCreateAd) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <AlertTriangle className="h-6 w-6 text-orange-600" />
+              <span>Limite de Anúncios Atingido</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Alert>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                Você já possui {activeAdsCount} anúncios ativos. 
+                O limite máximo é de {maxAds} anúncios por usuário.
+                Para criar um novo anúncio, pause ou exclua um dos seus anúncios ativos.
+              </AlertDescription>
+            </Alert>
+            
+            <div className="mt-6 flex space-x-4">
+              <Button onClick={() => setLocation("/profile")} variant="default">
+                Gerenciar Meus Anúncios
+              </Button>
+              <Button onClick={() => setLocation("/")} variant="outline">
+                Voltar para Home
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const onSubmit = (data: InsertAd) => {
     createAdMutation.mutate({

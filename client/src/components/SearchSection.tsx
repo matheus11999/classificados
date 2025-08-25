@@ -21,9 +21,7 @@ export default function SearchSection({ onSearch, onFilterChange }: SearchSectio
     const newFilter = activeFilter === filter ? "" : filter;
     setActiveFilter(newFilter);
     
-    if (newFilter === "location") {
-      onFilterChange({ location: "" }); // This would be replaced with actual location selection
-    } else if (newFilter) {
+    if (newFilter) {
       onFilterChange({ category: newFilter });
     } else {
       onFilterChange({});
@@ -31,7 +29,6 @@ export default function SearchSection({ onSearch, onFilterChange }: SearchSectio
   };
 
   const filters = [
-    { id: "location", label: "Todas as regiões", icon: MapPin },
     { id: "vehicles", label: "Veículos", icon: Car },
     { id: "real-estate", label: "Imóveis", icon: Home },
     { id: "electronics", label: "Eletrônicos", icon: Laptop },
