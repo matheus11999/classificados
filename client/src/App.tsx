@@ -7,6 +7,8 @@ import Layout from "@/components/Layout";
 import Home from "@/pages/Home";
 import CreateAd from "@/pages/CreateAd";
 import Profile from "@/pages/Profile";
+import AdminLogin from "@/pages/AdminLogin";
+import AdminDashboard from "@/pages/AdminDashboard";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -26,6 +28,12 @@ function Router() {
         <Layout>
           <Profile />
         </Layout>
+      </Route>
+      <Route path="/admin/login">
+        <AdminLogin />
+      </Route>
+      <Route path="/admin/*">
+        <AdminDashboard />
       </Route>
       <Route component={NotFound} />
     </Switch>
