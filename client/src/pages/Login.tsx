@@ -76,11 +76,11 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold">Entrar ou Cadastrar</CardTitle>
-          <p className="text-gray-600">Gerencie seus anúncios</p>
+          <p className="text-gray-600 dark:text-gray-400">Gerencie seus anúncios</p>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="login" className="w-full">

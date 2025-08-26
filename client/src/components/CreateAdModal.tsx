@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -97,6 +97,9 @@ export default function CreateAdModal({ open, onOpenChange }: CreateAdModalProps
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold">Criar Anúncio</DialogTitle>
+          <DialogDescription>
+            Preencha as informações do seu produto ou serviço
+          </DialogDescription>
         </DialogHeader>
         
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">

@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Calendar, Eye, Star } from "lucide-react";
@@ -41,6 +41,9 @@ export default function ProductDetailsModal({ ad, open, onOpenChange }: ProductD
             )}
             <span className="flex-1">{ad.title}</span>
           </DialogTitle>
+          <DialogDescription>
+            Detalhes completos do produto à venda
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">

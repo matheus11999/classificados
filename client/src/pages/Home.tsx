@@ -2,19 +2,19 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import AdCard from "@/components/AdCard";
 import SearchSection from "@/components/SearchSection";
-import CreateAdModal from "@/components/CreateAdModal";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { AdWithDetails, Category } from "@shared/schema";
 import ProductDetailsModal from "@/components/ProductDetailsModal";
+import { useLocation } from "wouter";
 
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState<{ category?: string; location?: string }>({});
-  const [createAdOpen, setCreateAdOpen] = useState(false);
   const [showAllRecent, setShowAllRecent] = useState(false);
   const [showAllFeatured, setShowAllFeatured] = useState(false);
   const [selectedAd, setSelectedAd] = useState<AdWithDetails | null>(null);
+  const [, setLocation] = useLocation();
 
   const buildAdsUrl = () => {
     const params = new URLSearchParams();
@@ -228,14 +228,12 @@ export default function Home() {
 
       {/* Floating Action Button */}
       <Button
-        onClick={() => setCreateAdOpen(true)}
+        onClick={() => setLocation("/create")}
         className="fixed bottom-24 right-6 w-14 h-14 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center z-30"
         data-testid="button-fab-create"
       >
         <Plus className="h-6 w-6" />
       </Button>
-
-      <CreateAdModal open={createAdOpen} onOpenChange={setCreateAdOpen} />
       <ProductDetailsModal 
         ad={selectedAd} 
         open={!!selectedAd} 
