@@ -229,10 +229,10 @@ export default function Home() {
       {/* Floating Action Button */}
       <Button
         onClick={() => setLocation("/create")}
-        className="fixed bottom-24 right-6 w-14 h-14 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center z-30"
+        className="fixed bottom-24 right-6 w-14 h-14 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-full shadow-lg hover:shadow-xl active:shadow-md transition-all duration-200 flex items-center justify-center z-30 active:scale-95 hover:scale-105"
         data-testid="button-fab-create"
       >
-        <Plus className="h-6 w-6" />
+        <Plus className="h-6 w-6 transition-transform duration-200" />
       </Button>
       <ProductDetailsModal 
         ad={selectedAd} 

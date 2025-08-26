@@ -26,6 +26,11 @@ export default function CreateAd() {
   useEffect(() => {
     // Check if user is authenticated
     if (!userAuth.isAuthenticated()) {
+      toast({
+        title: "Login necessário",
+        description: "Você precisa estar logado para criar anúncios.",
+        variant: "destructive",
+      });
       setLocation("/login");
       return;
     }
@@ -74,10 +79,19 @@ export default function CreateAd() {
       queryClient.invalidateQueries({ queryKey: ["/api/ads"] });
       queryClient.invalidateQueries({ queryKey: ["/api/user/ads"] });
       toast({
-        title: "Anúncio criado com sucesso!",
+        title: "🎉 Anúncio criado com sucesso!",
         description: "Seu anúncio foi publicado e já está visível para outros usuários.",
+        duration: 3000,
       });
-      setLocation("/profile");
+      
+      // Reset form after successful creation
+      form.reset();
+      setImagePreview("");
+      
+      // Navigate after a short delay for better UX
+      setTimeout(() => {
+        setLocation("/profile");
+      }, 1000);
     },
     onError: (error: any) => {
       console.error("Failed to create ad:", error);
@@ -142,8 +156,22 @@ export default function CreateAd() {
   }
 
   const onSubmit = (data: InsertAd) => {
+    const user = userAuth.getUser();
+    if (!user) {
+      toast({
+        title: "Erro de autenticação",
+        description: "Você precisa estar logado para criar um anúncio.",
+        variant: "destructive",
+      });
+      setLocation("/login");
+      return;
+    }
+    
+    // Debug logs removed for production
+    
     createAdMutation.mutate({
       ...data,
+      userId: user.id,
       imageUrl: imagePreview || undefined,
     });
   };
@@ -213,23 +241,26 @@ export default function CreateAd() {
 
         setImagePreview(response.imageUrl);
         toast({
-          title: "Sucesso",
-          description: "Imagem carregada com sucesso!",
+          title: "📸 Imagem carregada!",
+          description: "Sua imagem foi otimizada e está pronta.",
+          duration: 2000,
         });
       } catch (error: any) {
         console.error("Error uploading image:", error);
         
         if (error.message && error.message.includes('request entity too large')) {
           toast({
-            title: "Imagem muito grande",
-            description: "A imagem ainda é muito grande após compressão. Use uma imagem menor.",
+            title: "🖼️ Imagem muito grande",
+            description: "Por favor, use uma imagem menor (máx. 10MB).",
             variant: "destructive",
+            duration: 4000,
           });
         } else {
           toast({
-            title: "Erro",
-            description: "Erro ao carregar imagem. Tente novamente.",
+            title: "❌ Erro no upload",
+            description: "Não foi possível carregar a imagem. Tente novamente.",
             variant: "destructive",
+            duration: 3000,
           });
         }
       }
@@ -425,16 +456,23 @@ export default function CreateAd() {
               <Button
                 type="submit"
                 disabled={createAdMutation.isPending}
-                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                className={`flex-1 transition-all duration-200 ${
+                  createAdMutation.isPending 
+                    ? "bg-emerald-400 cursor-not-allowed" 
+                    : "bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800"
+                } text-white shadow-md hover:shadow-lg active:shadow-sm`}
                 data-testid="button-create-ad"
               >
                 {createAdMutation.isPending ? (
                   <>
-                    <i className="fas fa-spinner fa-spin mr-2"></i>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
                     Publicando...
                   </>
                 ) : (
-                  "Publicar Anúncio"
+                  <>
+                    <span className="mr-2">📢</span>
+                    Publicar Anúncio
+                  </>
                 )}
               </Button>
             </div>

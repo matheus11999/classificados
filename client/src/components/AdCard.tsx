@@ -89,7 +89,7 @@ export default function AdCard({ ad, variant = "featured", onAdClick }: AdCardPr
   if (variant === "compact") {
     return (
       <Card 
-        className="bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden cursor-pointer transform hover:-translate-y-1" 
+        className="bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md active:shadow-lg transition-all duration-200 overflow-hidden cursor-pointer transform hover:-translate-y-1 active:scale-98" 
         onClick={() => onAdClick?.(ad)}
         data-testid={`card-ad-${ad.id}`}
       >
@@ -158,7 +158,7 @@ export default function AdCard({ ad, variant = "featured", onAdClick }: AdCardPr
 
   return (
     <Card 
-      className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden cursor-pointer transform hover:-translate-y-1" 
+      className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm hover:shadow-lg active:shadow-xl transition-all duration-200 overflow-hidden cursor-pointer transform hover:-translate-y-1 active:scale-98" 
       onClick={() => onAdClick?.(ad)}
       data-testid={`card-ad-${ad.id}`}
     >
