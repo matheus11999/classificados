@@ -6,9 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { ChevronRight, Package, User, Settings, Eye, Trash2, Plus, LogOut, Edit, MapPin, Calendar, Bell, ArrowLeft } from "lucide-react";
+import { ChevronRight, Package, User, Settings, Eye, Trash2, Plus, LogOut, Edit, MapPin, Calendar, Bell, ArrowLeft, Zap } from "lucide-react";
 import { userAuth } from "@/lib/user-auth";
 import { useToast } from "@/hooks/use-toast";
+import { BoostButton } from "@/components/BoostButton";
 
 interface UserAd {
   id: string;
@@ -20,6 +21,8 @@ interface UserAd {
   views: string;
   expiresAt: string;
   createdAt: string;
+  userId?: string;
+  isPromoted?: boolean;
   category: {
     name: string;
     icon: string;
@@ -390,26 +393,58 @@ export default function UserDashboard() {
                         <Badge variant={ad.active ? "default" : "secondary"}>
                           {ad.active ? "Ativo" : "Pausado"}
                         </Badge>
+                        {ad.isPromoted && (
+                          <Badge variant="secondary" className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xs">
+                            <Zap className="h-3 w-3 mr-1" />
+                            Impulsionado
+                          </Badge>
+                        )}
                       </div>
                     </div>
                     
-                    <div className="flex items-center justify-between text-sm">
-                      <div className="flex items-center space-x-4">
-                        <div className="flex items-center space-x-1 text-gray-500">
+                    <div className="flex items-center justify-between text-sm text-gray-500">
+                      <div className="flex items-center space-x-3">
+                        <div className="flex items-center space-x-1">
                           <Eye className="h-4 w-4" />
-                          <span>{ad.views || 0} visualizações</span>
+                          <span>{ad.views || 0}</span>
                         </div>
                         {ad.location && (
-                          <div className="flex items-center space-x-1 text-gray-500">
+                          <div className="flex items-center space-x-1">
                             <MapPin className="h-4 w-4" />
-                            <span className="truncate max-w-20">{ad.location}</span>
+                            <span className="truncate max-w-16">{ad.location}</span>
                           </div>
                         )}
                       </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 pt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setLocation(`/edit/${ad.id}`)}
+                        className="flex-1 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700"
+                      >
+                        <Edit className="h-4 w-4 mr-2" />
+                        Editar
+                      </Button>
+                      
+                      {!ad.isPromoted && (
+                        <BoostButton 
+                          ad={{ 
+                            id: ad.id, 
+                            title: ad.title, 
+                            price: ad.price,
+                            userId: ad.userId || user?.id
+                          }}
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                        />
+                      )}
                       
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50">
+                          <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50">
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </AlertDialogTrigger>

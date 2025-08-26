@@ -23,15 +23,6 @@ export default function CreateAd() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
-  // Alternative state-based form system
-  const [altFormData, setAltFormData] = useState({
-    title: '',
-    description: '',
-    price: '',
-    location: '',
-    whatsapp: '',
-    categoryId: ''
-  });
 
   useEffect(() => {
     // Check if user is authenticated
@@ -80,26 +71,12 @@ export default function CreateAd() {
 
   const createAdMutation = useMutation({
     mutationFn: async (data: InsertAd) => {
-      console.log("=== MUTATION EXECUTION ===");
-      console.log("9. Mutation called with data:", data);
-      console.log("10. Making API call...");
-      
-      try {
-        const response = await userAuth.apiCall("/api/ads", {
-          method: "POST",
-          body: JSON.stringify(data),
-        });
-        console.log("11. API response:", response);
-        return response;
-      } catch (error) {
-        console.log("12. API error:", error);
-        throw error;
-      }
+      return await userAuth.apiCall("/api/ads", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
     },
     onSuccess: (response) => {
-      console.log("=== MUTATION SUCCESS ===");
-      console.log("13. Success callback called with:", response);
-      
       queryClient.invalidateQueries({ queryKey: ["/api/ads"] });
       queryClient.invalidateQueries({ queryKey: ["/api/user/ads"] });
       toast({
@@ -118,10 +95,6 @@ export default function CreateAd() {
       }, 1000);
     },
     onError: (error: any) => {
-      console.log("=== MUTATION ERROR ===");
-      console.log("13. Error callback called with:", error);
-      console.error("Failed to create ad:", error);
-      
       toast({
         title: "Erro ao criar anúncio",
         description: error.message || "Tente novamente em alguns instantes.",
@@ -182,17 +155,9 @@ export default function CreateAd() {
   }
 
   const onSubmit = (data: InsertAd) => {
-    console.log("=== FORM SUBMISSION DEBUG ===");
-    console.log("1. onSubmit called with data:", data);
-    console.log("2. Form errors:", form.formState.errors);
-    console.log("3. Form is valid:", form.formState.isValid);
-    console.log("4. Form values:", form.getValues());
-    
     const user = userAuth.getUser();
-    console.log("5. User from auth:", user);
     
     if (!user) {
-      console.log("6. No user - redirecting to login");
       toast({
         title: "Erro de autenticação",
         description: "Você precisa estar logado para criar um anúncio.",
@@ -207,9 +172,6 @@ export default function CreateAd() {
       userId: user.id,
       imageUrl: imagePreview || undefined,
     };
-    
-    console.log("7. Final payload:", payload);
-    console.log("8. Calling mutation...");
     
     createAdMutation.mutate(payload);
   };
@@ -325,22 +287,7 @@ export default function CreateAd() {
           <CardTitle className="text-2xl font-bold">Criar Novo Anúncio</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={form.handleSubmit(
-            (data) => {
-              console.log("=== FORM HANDLESUBMIT SUCCESS ===");
-              console.log("handleSubmit success called with:", data);
-              onSubmit(data);
-            },
-            (errors) => {
-              console.log("=== FORM HANDLESUBMIT ERROR ===");
-              console.log("handleSubmit error called with:", errors);
-              toast({
-                title: "Erro no formulário",
-                description: "Verifique os campos obrigatórios.",
-                variant: "destructive",
-              });
-            }
-          )} className="space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div>
               <Label htmlFor="title" className="text-sm font-medium">
                 Título do anúncio *
@@ -514,21 +461,6 @@ export default function CreateAd() {
                     ? "bg-emerald-400 cursor-not-allowed" 
                     : "bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800"
                 } text-white shadow-md hover:shadow-lg active:shadow-sm`}
-                onClick={(e) => {
-                  console.log("=== BUTTON CLICK DEBUG ===");
-                  console.log("Button clicked!", e);
-                  console.log("Form state:", {
-                    isSubmitting: form.formState.isSubmitting,
-                    isValid: form.formState.isValid,
-                    errors: form.formState.errors,
-                    values: form.getValues()
-                  });
-                  console.log("Mutation state:", {
-                    isPending: createAdMutation.isPending,
-                    isError: createAdMutation.isError,
-                    error: createAdMutation.error
-                  });
-                }}
                 data-testid="button-create-ad"
               >
                 {createAdMutation.isPending ? (
@@ -542,139 +474,6 @@ export default function CreateAd() {
                     Publicar Anúncio
                   </>
                 )}
-              </Button>
-            </div>
-            
-            {/* FALLBACK: Alternative submission system */}
-            <div className="pt-4 border-t mt-4 space-y-3">
-              <Button
-                type="button"
-                variant="destructive"
-                onClick={() => {
-                  console.log("=== BYPASS BUTTON CLICKED ===");
-                  const formValues = form.getValues();
-                  console.log("Manual form values:", formValues);
-                  onSubmit(formValues);
-                }}
-                className="w-full"
-              >
-                🚨 DEBUG: Forçar Envio (React Hook Form)
-              </Button>
-              
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => {
-                  console.log("=== MANUAL DATA COLLECTION ===");
-                  
-                  // Collect data directly from DOM elements
-                  const title = (document.getElementById('title') as HTMLInputElement)?.value || '';
-                  const description = (document.getElementById('description') as HTMLTextAreaElement)?.value || '';
-                  const price = (document.getElementById('price') as HTMLInputElement)?.value || '';
-                  const location = (document.getElementById('location') as HTMLInputElement)?.value || '';
-                  const whatsapp = (document.getElementById('whatsapp') as HTMLInputElement)?.value || '';
-                  const categorySelect = document.querySelector('[data-testid="select-category"]') as HTMLElement;
-                  const categoryId = form.getValues('categoryId') || '';
-                  
-                  const manualData = {
-                    title,
-                    description,
-                    price,
-                    location,
-                    whatsapp,
-                    categoryId,
-                    imageUrl: imagePreview || undefined
-                  };
-                  
-                  console.log("Manual data collected:", manualData);
-                  
-                  // Basic validation
-                  if (!title.trim()) {
-                    toast({
-                      title: "Título obrigatório",
-                      description: "Por favor, insira um título para o anúncio.",
-                      variant: "destructive",
-                    });
-                    return;
-                  }
-                  
-                  if (!description.trim()) {
-                    toast({
-                      title: "Descrição obrigatória", 
-                      description: "Por favor, descreva o produto ou serviço.",
-                      variant: "destructive",
-                    });
-                    return;
-                  }
-                  
-                  if (!price.trim()) {
-                    toast({
-                      title: "Preço obrigatório",
-                      description: "Por favor, informe o preço.",
-                      variant: "destructive",
-                    });
-                    return;
-                  }
-                  
-                  if (!categoryId.trim()) {
-                    toast({
-                      title: "Categoria obrigatória",
-                      description: "Por favor, selecione uma categoria.",
-                      variant: "destructive",
-                    });
-                    return;
-                  }
-                  
-                  if (!whatsapp.trim()) {
-                    toast({
-                      title: "WhatsApp obrigatório",
-                      description: "Por favor, informe seu WhatsApp.",
-                      variant: "destructive",
-                    });
-                    return;
-                  }
-                  
-                  // Call onSubmit with manual data
-                  onSubmit(manualData);
-                }}
-                className="w-full"
-              >
-                🔧 ALTERNATIVO: Coletar Dados Manualmente
-              </Button>
-              
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  console.log("=== STATE-BASED SUBMISSION ===");
-                  console.log("State data:", altFormData);
-                  
-                  // Basic validation
-                  const errors = [];
-                  if (!altFormData.title.trim()) errors.push("Título é obrigatório");
-                  if (!altFormData.description.trim()) errors.push("Descrição é obrigatória");
-                  if (!altFormData.price.trim()) errors.push("Preço é obrigatório");
-                  if (!altFormData.categoryId.trim()) errors.push("Categoria é obrigatória");
-                  if (!altFormData.whatsapp.trim()) errors.push("WhatsApp é obrigatório");
-                  
-                  if (errors.length > 0) {
-                    toast({
-                      title: "Campos obrigatórios",
-                      description: errors.join(", "),
-                      variant: "destructive",
-                    });
-                    return;
-                  }
-                  
-                  // Call onSubmit with state data
-                  onSubmit({
-                    ...altFormData,
-                    imageUrl: imagePreview || undefined
-                  });
-                }}
-                className="w-full"
-              >
-                🎯 STATE-BASED: Usar Estado React
               </Button>
             </div>
           </form>

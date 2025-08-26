@@ -228,9 +228,9 @@ export const insertAdSchema = createInsertSchema(ads).omit({
   active: true,
   views: true,
   expiresAt: true,
+  userId: true, // userId is added programmatically, not from form
 }).extend({
   price: z.string().min(1, "Preço é obrigatório"),
-  userId: z.string().min(1, "Usuário é obrigatório"),
 });
 
 export const insertFavoriteSchema = createInsertSchema(favorites).omit({
