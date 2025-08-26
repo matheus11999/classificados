@@ -554,7 +554,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get featured/boosted ads for homepage
-  app.get('/api/ads/featured', async (req, res) => {
+  app.get('/api/featured', async (req, res) => {
     try {
       const boostedAds = await storage.getActiveBoostedAds();
       res.json(boostedAds);

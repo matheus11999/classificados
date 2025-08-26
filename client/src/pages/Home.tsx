@@ -29,7 +29,7 @@ export default function Home() {
   });
 
   const { data: boostedAds = [] } = useQuery<AdWithDetails[]>({
-    queryKey: ["/api/ads/featured"],
+    queryKey: ["/api/featured"],
   });
 
   const { data: categories = [] } = useQuery<Category[]>({

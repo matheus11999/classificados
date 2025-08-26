@@ -148,7 +148,7 @@ Execute `npm run db:push` para aplicar o esquema no banco.
 - `GET /api/boost/status/:id` - **Status do pagamento** (público)
   - Response: Status do pagamento e detalhes do impulsionamento
 - `POST /api/boost/webhook` - Webhook do Mercado Pago (interno)
-- `GET /api/ads/featured` - **Anúncios impulsionados ativos** (público)
+- `GET /api/featured` - **Anúncios impulsionados ativos** (público)
   - Response: Array de anúncios em destaque
 
 #### Autenticação e Usuário
