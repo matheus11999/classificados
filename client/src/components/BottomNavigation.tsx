@@ -1,8 +1,10 @@
 import { useLocation } from "wouter";
-import { Home, Plus, User } from "lucide-react";
+import { Home, Plus, User, Info } from "lucide-react";
+import { userAuth } from "@/lib/user-auth";
 
 export default function BottomNavigation() {
   const [location, setLocation] = useLocation();
+  const isAuthenticated = userAuth.isAuthenticated();
 
   const navItems = [
     {
@@ -19,8 +21,8 @@ export default function BottomNavigation() {
     },
     {
       path: "/profile",
-      icon: User,
-      label: "Info",
+      icon: isAuthenticated ? User : Info,
+      label: isAuthenticated ? "Dashboard" : "Info",
       testId: "nav-profile",
     },
   ];

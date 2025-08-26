@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Bell, Package, User, Settings, Eye, Trash2, Pause, Play, Edit } from "lucide-react";
+import { Bell, Package, User, Settings, Eye, Trash2, Plus, BarChart3, Calendar } from "lucide-react";
 import { userAuth } from "@/lib/user-auth";
 import { useToast } from "@/hooks/use-toast";
 
@@ -122,15 +122,15 @@ export default function UserDashboard() {
     }
   };
 
-  const handleLogout = () => {
-    userAuth.logout();
-    setLocation("/");
-  };
-
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600 mx-auto"></div>
+            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">Carregando...</p>
+          </div>
+        </div>
       </div>
     );
   }
@@ -140,95 +140,104 @@ export default function UserDashboard() {
   const unreadNotifications = notifications.filter(n => !n.read);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <h1 className="text-xl font-semibold text-gray-900">
-                Meu Dashboard
-              </h1>
-            </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600">
-                Olá, {user?.firstName || user?.username}!
-              </span>
-              <Button variant="outline" size="sm" onClick={() => setLocation("/")}>
-                Voltar ao site
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleLogout}>
-                Sair
-              </Button>
-            </div>
-          </div>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      {/* Welcome Section */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            Meu Dashboard
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">
+            Olá, {user?.firstName || user?.username}! Gerencie seus anúncios e perfil.
+          </p>
         </div>
+        <Button onClick={() => setLocation("/create")} className="bg-emerald-600 hover:bg-emerald-700">
+          <Plus className="h-4 w-4 mr-2" />
+          Novo Anúncio
+        </Button>
+      </div>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-300">Anúncios Ativos</CardTitle>
+            <div className="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
+              <Package className="h-4 w-4 text-green-600 dark:text-green-400" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600 dark:text-green-400">{activeAds.length}</div>
+            <p className="text-xs text-gray-500 dark:text-gray-400">produtos publicados</p>
+          </CardContent>
+        </Card>
+        
+        <Card className="hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-300">Visualizações</CardTitle>
+            <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+              <Eye className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+              {ads.reduce((sum, ad) => sum + parseInt(ad.views || "0"), 0)}
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400">total de acessos</p>
+          </CardContent>
+        </Card>
+        
+        <Card className="hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-300">Pausados</CardTitle>
+            <div className="w-8 h-8 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center">
+              <Calendar className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">{inactiveAds.length}</div>
+            <p className="text-xs text-gray-500 dark:text-gray-400">anúncios inativos</p>
+          </CardContent>
+        </Card>
+        
+        <Card className="hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-300">Notificações</CardTitle>
+            <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
+              <Bell className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+              {unreadNotifications.length}
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400">não lidas</p>
+          </CardContent>
+        </Card>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Anúncios Ativos</CardTitle>
-              <Package className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{activeAds.length}</div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total de Visualizações</CardTitle>
-              <Eye className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {ads.reduce((sum, ad) => sum + parseInt(ad.views || "0"), 0)}
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Anúncios Pausados</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">{inactiveAds.length}</div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Notificações</CardTitle>
-              <Bell className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
+      {/* Management Tabs */}
+      <Tabs defaultValue="ads" className="w-full">
+        <TabsList className="grid w-full grid-cols-3 mb-6">
+          <TabsTrigger value="ads" className="flex items-center gap-2">
+            <Package className="h-4 w-4" />
+            Meus Anúncios
+          </TabsTrigger>
+          <TabsTrigger value="notifications" className="flex items-center gap-2">
+            <Bell className="h-4 w-4" />
+            Notificações 
+            {unreadNotifications.length > 0 && (
+              <Badge variant="destructive" className="ml-1 text-xs h-5 w-5 p-0 flex items-center justify-center">
                 {unreadNotifications.length}
-                <span className="text-sm text-gray-500 ml-1">não lidas</span>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Management Tabs */}
-        <Tabs defaultValue="ads" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="ads">Meus Anúncios</TabsTrigger>
-            <TabsTrigger value="notifications">
-              Notificações 
-              {unreadNotifications.length > 0 && (
-                <Badge variant="destructive" className="ml-2 text-xs">
-                  {unreadNotifications.length}
-                </Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="profile">Perfil</TabsTrigger>
-          </TabsList>
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="profile" className="flex items-center gap-2">
+            <User className="h-4 w-4" />
+            Perfil
+          </TabsTrigger>
+        </TabsList>
           
-          <TabsContent value="ads" className="mt-6">
+        <TabsContent value="ads">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
@@ -343,8 +352,8 @@ export default function UserDashboard() {
               </CardContent>
             </Card>
           </TabsContent>
-          
-          <TabsContent value="notifications" className="mt-6">
+        
+        <TabsContent value="notifications">
             <Card>
               <CardHeader>
                 <CardTitle>Notificações</CardTitle>
@@ -388,8 +397,8 @@ export default function UserDashboard() {
               </CardContent>
             </Card>
           </TabsContent>
-          
-          <TabsContent value="profile" className="mt-6">
+        
+        <TabsContent value="profile">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
@@ -458,9 +467,8 @@ export default function UserDashboard() {
                 </Button>
               </CardContent>
             </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
