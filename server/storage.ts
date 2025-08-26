@@ -6,6 +6,8 @@ import {
   adminUsers,
   siteSettings,
   notifications,
+  boostPromotions,
+  boostedAds,
   type User,
   type UpsertUser,
   type RegisterUser,
@@ -22,6 +24,11 @@ import {
   type InsertSiteSetting,
   type Notification,
   type InsertNotification,
+  type BoostPromotion,
+  type InsertBoostPromotion,
+  type BoostedAd,
+  type InsertBoostedAd,
+  type BoostedAdWithDetails,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql, ilike, or } from "drizzle-orm";
@@ -662,6 +669,325 @@ export class DatabaseStorage implements IStorage {
         updatedAt: new Date()
       })
       .where(eq(users.id, userId));
+  }
+
+  // Boost promotion operations
+  async getBoostPromotions(): Promise<BoostPromotion[]> {
+    return await db
+      .select()
+      .from(boostPromotions)
+      .where(eq(boostPromotions.active, true))
+      .orderBy(boostPromotions.price);
+  }
+
+  async getBoostPromotion(id: string): Promise<BoostPromotion | undefined> {
+    const [promotion] = await db
+      .select()
+      .from(boostPromotions)
+      .where(eq(boostPromotions.id, id));
+    return promotion;
+  }
+
+  async createBoostPromotion(promotionData: InsertBoostPromotion): Promise<BoostPromotion> {
+    const [promotion] = await db
+      .insert(boostPromotions)
+      .values(promotionData)
+      .returning();
+    return promotion;
+  }
+
+  async updateBoostPromotion(id: string, promotionData: Partial<InsertBoostPromotion>): Promise<BoostPromotion | undefined> {
+    const [promotion] = await db
+      .update(boostPromotions)
+      .set({ ...promotionData, updatedAt: new Date() })
+      .where(eq(boostPromotions.id, id))
+      .returning();
+    return promotion;
+  }
+
+  async deleteBoostPromotion(id: string): Promise<boolean> {
+    const [promotion] = await db
+      .delete(boostPromotions)
+      .where(eq(boostPromotions.id, id))
+      .returning();
+    return !!promotion;
+  }
+
+  // Boosted ads operations
+  async createBoostedAd(boostedAdData: InsertBoostedAd): Promise<BoostedAd> {
+    const [boostedAd] = await db
+      .insert(boostedAds)
+      .values(boostedAdData)
+      .returning();
+    return boostedAd;
+  }
+
+  async getBoostedAd(id: string): Promise<BoostedAdWithDetails | undefined> {
+    const [result] = await db
+      .select({
+        id: boostedAds.id,
+        adId: boostedAds.adId,
+        promotionId: boostedAds.promotionId,
+        paymentId: boostedAds.paymentId,
+        paymentStatus: boostedAds.paymentStatus,
+        paymentMethod: boostedAds.paymentMethod,
+        amount: boostedAds.amount,
+        payerName: boostedAds.payerName,
+        payerLastName: boostedAds.payerLastName,
+        payerCpf: boostedAds.payerCpf,
+        payerEmail: boostedAds.payerEmail,
+        payerPhone: boostedAds.payerPhone,
+        startDate: boostedAds.startDate,
+        endDate: boostedAds.endDate,
+        active: boostedAds.active,
+        createdAt: boostedAds.createdAt,
+        updatedAt: boostedAds.updatedAt,
+        promotion: {
+          id: boostPromotions.id,
+          name: boostPromotions.name,
+          price: boostPromotions.price,
+          durationDays: boostPromotions.durationDays,
+          description: boostPromotions.description,
+          active: boostPromotions.active,
+          createdAt: boostPromotions.createdAt,
+          updatedAt: boostPromotions.updatedAt,
+        },
+        ad: {
+          id: ads.id,
+          title: ads.title,
+          description: ads.description,
+          price: ads.price,
+          imageUrl: ads.imageUrl,
+          categoryId: ads.categoryId,
+          location: ads.location,
+          whatsapp: ads.whatsapp,
+          userId: ads.userId,
+          featured: ads.featured,
+          active: ads.active,
+          views: ads.views,
+          expiresAt: ads.expiresAt,
+          createdAt: ads.createdAt,
+          updatedAt: ads.updatedAt,
+          user: {
+            id: users.id,
+            username: users.username,
+            email: users.email,
+            firstName: users.firstName,
+            lastName: users.lastName,
+            profileImageUrl: users.profileImageUrl,
+            whatsapp: users.whatsapp,
+            active: users.active,
+            activeAdsCount: users.activeAdsCount,
+            createdAt: users.createdAt,
+            updatedAt: users.updatedAt,
+          },
+          category: {
+            id: categories.id,
+            name: categories.name,
+            icon: categories.icon,
+            createdAt: categories.createdAt,
+          },
+        },
+      })
+      .from(boostedAds)
+      .leftJoin(boostPromotions, eq(boostedAds.promotionId, boostPromotions.id))
+      .leftJoin(ads, eq(boostedAds.adId, ads.id))
+      .leftJoin(users, eq(ads.userId, users.id))
+      .leftJoin(categories, eq(ads.categoryId, categories.id))
+      .where(eq(boostedAds.id, id));
+
+    return result as BoostedAdWithDetails | undefined;
+  }
+
+  async updateBoostedAd(id: string, updateData: Partial<BoostedAd>): Promise<BoostedAd | undefined> {
+    const [boostedAd] = await db
+      .update(boostedAds)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(eq(boostedAds.id, id))
+      .returning();
+    return boostedAd;
+  }
+
+  async updateBoostedAdPaymentStatus(paymentId: string, status: string, startDate?: Date): Promise<BoostedAd | undefined> {
+    const updateData: any = { 
+      paymentStatus: status, 
+      updatedAt: new Date() 
+    };
+    
+    if (status === 'paid' && startDate) {
+      updateData.active = true;
+      updateData.startDate = startDate;
+      
+      // Calculate end date based on promotion duration
+      const [boostedAd] = await db
+        .select({ promotionId: boostedAds.promotionId })
+        .from(boostedAds)
+        .where(eq(boostedAds.paymentId, paymentId));
+      
+      if (boostedAd) {
+        const [promotion] = await db
+          .select({ durationDays: boostPromotions.durationDays })
+          .from(boostPromotions)
+          .where(eq(boostPromotions.id, boostedAd.promotionId));
+        
+        if (promotion) {
+          const durationMs = parseInt(promotion.durationDays) * 24 * 60 * 60 * 1000;
+          updateData.endDate = new Date(startDate.getTime() + durationMs);
+        }
+      }
+    }
+    
+    const [updatedBoostedAd] = await db
+      .update(boostedAds)
+      .set(updateData)
+      .where(eq(boostedAds.paymentId, paymentId))
+      .returning();
+    
+    return updatedBoostedAd;
+  }
+
+  async getActiveBoostedAds(): Promise<AdWithDetails[]> {
+    const result = await db
+      .select({
+        id: ads.id,
+        title: ads.title,
+        description: ads.description,
+        price: ads.price,
+        imageUrl: ads.imageUrl,
+        categoryId: ads.categoryId,
+        location: ads.location,
+        whatsapp: ads.whatsapp,
+        userId: ads.userId,
+        featured: ads.featured,
+        active: ads.active,
+        views: ads.views,
+        expiresAt: ads.expiresAt,
+        createdAt: ads.createdAt,
+        updatedAt: ads.updatedAt,
+        user: {
+          id: users.id,
+          username: users.username,
+          email: users.email,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          profileImageUrl: users.profileImageUrl,
+          whatsapp: users.whatsapp,
+          active: users.active,
+          activeAdsCount: users.activeAdsCount,
+          createdAt: users.createdAt,
+          updatedAt: users.updatedAt,
+        },
+        category: {
+          id: categories.id,
+          name: categories.name,
+          icon: categories.icon,
+          createdAt: categories.createdAt,
+        },
+        isPromoted: sql<boolean>`TRUE`,
+        promotionEndDate: boostedAds.endDate,
+      })
+      .from(boostedAds)
+      .innerJoin(ads, eq(boostedAds.adId, ads.id))
+      .leftJoin(users, eq(ads.userId, users.id))
+      .leftJoin(categories, eq(ads.categoryId, categories.id))
+      .where(and(
+        eq(boostedAds.active, true),
+        eq(boostedAds.paymentStatus, 'paid'),
+        sql`${boostedAds.endDate} > NOW()`
+      ))
+      .orderBy(desc(boostedAds.startDate));
+
+    return result as AdWithDetails[];
+  }
+
+  async getAllBoostedAds(): Promise<BoostedAdWithDetails[]> {
+    const result = await db
+      .select({
+        id: boostedAds.id,
+        adId: boostedAds.adId,
+        promotionId: boostedAds.promotionId,
+        paymentId: boostedAds.paymentId,
+        paymentStatus: boostedAds.paymentStatus,
+        paymentMethod: boostedAds.paymentMethod,
+        amount: boostedAds.amount,
+        payerName: boostedAds.payerName,
+        payerLastName: boostedAds.payerLastName,
+        payerCpf: boostedAds.payerCpf,
+        payerEmail: boostedAds.payerEmail,
+        payerPhone: boostedAds.payerPhone,
+        startDate: boostedAds.startDate,
+        endDate: boostedAds.endDate,
+        active: boostedAds.active,
+        createdAt: boostedAds.createdAt,
+        updatedAt: boostedAds.updatedAt,
+        promotion: {
+          id: boostPromotions.id,
+          name: boostPromotions.name,
+          price: boostPromotions.price,
+          durationDays: boostPromotions.durationDays,
+          description: boostPromotions.description,
+          active: boostPromotions.active,
+          createdAt: boostPromotions.createdAt,
+          updatedAt: boostPromotions.updatedAt,
+        },
+        ad: {
+          id: ads.id,
+          title: ads.title,
+          description: ads.description,
+          price: ads.price,
+          imageUrl: ads.imageUrl,
+          categoryId: ads.categoryId,
+          location: ads.location,
+          whatsapp: ads.whatsapp,
+          userId: ads.userId,
+          featured: ads.featured,
+          active: ads.active,
+          views: ads.views,
+          expiresAt: ads.expiresAt,
+          createdAt: ads.createdAt,
+          updatedAt: ads.updatedAt,
+          user: {
+            id: users.id,
+            username: users.username,
+            email: users.email,
+            firstName: users.firstName,
+            lastName: users.lastName,
+            profileImageUrl: users.profileImageUrl,
+            whatsapp: users.whatsapp,
+            active: users.active,
+            activeAdsCount: users.activeAdsCount,
+            createdAt: users.createdAt,
+            updatedAt: users.updatedAt,
+          },
+          category: {
+            id: categories.id,
+            name: categories.name,
+            icon: categories.icon,
+            createdAt: categories.createdAt,
+          },
+        },
+      })
+      .from(boostedAds)
+      .leftJoin(boostPromotions, eq(boostedAds.promotionId, boostPromotions.id))
+      .leftJoin(ads, eq(boostedAds.adId, ads.id))
+      .leftJoin(users, eq(ads.userId, users.id))
+      .leftJoin(categories, eq(ads.categoryId, categories.id))
+      .orderBy(desc(boostedAds.createdAt));
+
+    return result as BoostedAdWithDetails[];
+  }
+
+  async expireOldBoostedAds(): Promise<void> {
+    await db
+      .update(boostedAds)
+      .set({ 
+        active: false, 
+        updatedAt: new Date() 
+      })
+      .where(and(
+        eq(boostedAds.active, true),
+        sql`${boostedAds.endDate} < NOW()`
+      ));
   }
 }
 

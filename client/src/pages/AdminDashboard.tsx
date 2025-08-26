@@ -9,6 +9,8 @@ import AdminUsers from "@/components/admin/AdminUsers";
 import AdminAds from "@/components/admin/AdminAds";
 import AdminCategories from "@/components/admin/AdminCategories";
 import AdminSettings from "@/components/admin/AdminSettings";
+import AdminBoostPromotions from "@/components/admin/AdminBoostPromotions";
+import AdminBoostedAds from "@/components/admin/AdminBoostedAds";
 
 interface AdminStats {
   totalUsers: number;
@@ -151,10 +153,12 @@ function DashboardHome({ stats, loading }: { stats: AdminStats | null; loading: 
 
       {/* Management Tabs */}
       <Tabs defaultValue="users" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="users">Usuários</TabsTrigger>
           <TabsTrigger value="ads">Anúncios</TabsTrigger>
           <TabsTrigger value="categories">Categorias</TabsTrigger>
+          <TabsTrigger value="boost-promotions">Promoções</TabsTrigger>
+          <TabsTrigger value="boosted-ads">Impulsionados</TabsTrigger>
           <TabsTrigger value="settings">Configurações</TabsTrigger>
         </TabsList>
         
@@ -168,6 +172,14 @@ function DashboardHome({ stats, loading }: { stats: AdminStats | null; loading: 
         
         <TabsContent value="categories" className="mt-6">
           <AdminCategories />
+        </TabsContent>
+        
+        <TabsContent value="boost-promotions" className="mt-6">
+          <AdminBoostPromotions />
+        </TabsContent>
+        
+        <TabsContent value="boosted-ads" className="mt-6">
+          <AdminBoostedAds />
         </TabsContent>
         
         <TabsContent value="settings" className="mt-6">

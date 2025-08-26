@@ -1,7 +1,8 @@
 import { AdWithDetails } from "@shared/schema";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Heart, MapPin } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Heart, MapPin, Star } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useState } from "react";
@@ -10,6 +11,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import { BoostButton } from "./BoostButton";
 
 interface AdCardProps {
   ad: AdWithDetails;
@@ -102,9 +104,16 @@ export default function AdCard({ ad, variant = "featured" }: AdCardProps) {
         </div>
         
         <CardContent className="p-3">
-          <h3 className="font-medium text-gray-900 dark:text-white text-sm mb-1 line-clamp-1" data-testid={`text-title-${ad.id}`}>
-            {ad.title}
-          </h3>
+          <div className="flex items-center gap-1 mb-1">
+            <h3 className="font-medium text-gray-900 dark:text-white text-sm line-clamp-1 flex-1" data-testid={`text-title-${ad.id}`}>
+              {ad.title}
+            </h3>
+            {ad.isPromoted && (
+              <Badge variant="secondary" className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xs px-1 py-0">
+                <Star className="h-2 w-2" />
+              </Badge>
+            )}
+          </div>
           <p className="text-emerald-600 font-bold text-lg mb-2" data-testid={`text-price-${ad.id}`}>
             R$ {parseFloat(ad.price).toLocaleString("pt-BR", {
               minimumFractionDigits: 0,
@@ -115,14 +124,27 @@ export default function AdCard({ ad, variant = "featured" }: AdCardProps) {
             {ad.location}
           </p>
           
-          <Button
-            onClick={handleWhatsAppClick}
-            className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white font-medium py-2 px-3 rounded-lg transition-all duration-200 flex items-center justify-center space-x-1 text-sm"
-            data-testid={`button-whatsapp-${ad.id}`}
-          >
-            <i className="fab fa-whatsapp"></i>
-            <span>Contato</span>
-          </Button>
+          <div className="space-y-1">
+            <Button
+              onClick={handleWhatsAppClick}
+              className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white font-medium py-2 px-3 rounded-lg transition-all duration-200 flex items-center justify-center space-x-1 text-sm"
+              data-testid={`button-whatsapp-${ad.id}`}
+            >
+              <i className="fab fa-whatsapp"></i>
+              <span>Contato</span>
+            </Button>
+            
+            <BoostButton 
+              ad={{ 
+                id: ad.id, 
+                title: ad.title, 
+                price: ad.price 
+              }}
+              variant="outline"
+              size="sm"
+              className="w-full"
+            />
+          </div>
         </CardContent>
       </Card>
     );
@@ -148,9 +170,17 @@ export default function AdCard({ ad, variant = "featured" }: AdCardProps) {
       <CardContent className="p-5">
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1">
-            <h3 className="font-semibold text-gray-900 dark:text-white text-lg mb-1" data-testid={`text-title-${ad.id}`}>
-              {ad.title}
-            </h3>
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="font-semibold text-gray-900 dark:text-white text-lg" data-testid={`text-title-${ad.id}`}>
+                {ad.title}
+              </h3>
+              {ad.isPromoted && (
+                <Badge variant="secondary" className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white">
+                  <Star className="h-3 w-3 mr-1" />
+                  Destaque
+                </Badge>
+              )}
+            </div>
             <p className="text-2xl font-bold text-emerald-600" data-testid={`text-price-${ad.id}`}>
               R$ {parseFloat(ad.price).toLocaleString("pt-BR", {
                 minimumFractionDigits: 0,
@@ -185,14 +215,27 @@ export default function AdCard({ ad, variant = "featured" }: AdCardProps) {
           <span data-testid={`text-time-${ad.id}`}>{timeAgo}</span>
         </div>
         
-        <Button
-          onClick={handleWhatsAppClick}
-          className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white font-medium py-3 px-4 rounded-xl transition-all duration-200 flex items-center justify-center space-x-2 hover:shadow-lg"
-          data-testid={`button-whatsapp-${ad.id}`}
-        >
-          <i className="fab fa-whatsapp text-lg"></i>
-          <span>Entrar em Contato</span>
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={handleWhatsAppClick}
+            className="flex-1 bg-[#25D366] hover:bg-[#128C7E] text-white font-medium py-3 px-4 rounded-xl transition-all duration-200 flex items-center justify-center space-x-2 hover:shadow-lg"
+            data-testid={`button-whatsapp-${ad.id}`}
+          >
+            <i className="fab fa-whatsapp text-lg"></i>
+            <span>Contato</span>
+          </Button>
+          
+          <BoostButton 
+            ad={{ 
+              id: ad.id, 
+              title: ad.title, 
+              price: ad.price 
+            }}
+            variant="outline"
+            size="default"
+            className="px-4 py-3"
+          />
+        </div>
       </CardContent>
     </Card>
   );

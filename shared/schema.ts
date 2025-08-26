@@ -106,6 +106,44 @@ export const notifications = pgTable("notifications", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Boost promotions table - configura preços e duração dos impulsos
+export const boostPromotions = pgTable("boost_promotions", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(), // "Impulso Básico", "Impulso Premium"
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  durationDays: decimal("duration_days").default("5"), // 5 dias por padrão
+  description: text("description"),
+  active: boolean("active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Boosted ads table - anúncios que foram impulsionados
+export const boostedAds = pgTable("boosted_ads", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  adId: uuid("ad_id").references(() => ads.id).notNull(),
+  promotionId: uuid("promotion_id").references(() => boostPromotions.id).notNull(),
+  paymentId: varchar("payment_id"), // ID do pagamento no Mercado Pago
+  paymentStatus: varchar("payment_status").default("pending"), // pending, paid, failed
+  paymentMethod: varchar("payment_method").default("pix"),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  
+  // Dados do pagador
+  payerName: varchar("payer_name").notNull(),
+  payerLastName: varchar("payer_last_name").notNull(),
+  payerCpf: varchar("payer_cpf").notNull(),
+  payerEmail: varchar("payer_email"),
+  payerPhone: varchar("payer_phone"),
+  
+  // Controle de tempo
+  startDate: timestamp("start_date"),
+  endDate: timestamp("end_date"),
+  active: boolean("active").default(false),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   ads: many(ads),
@@ -136,6 +174,21 @@ export const favoritesRelations = relations(favorites, ({ one }) => ({
   ad: one(ads, {
     fields: [favorites.adId],
     references: [ads.id],
+  }),
+}));
+
+export const boostPromotionsRelations = relations(boostPromotions, ({ many }) => ({
+  boostedAds: many(boostedAds),
+}));
+
+export const boostedAdsRelations = relations(boostedAds, ({ one }) => ({
+  ad: one(ads, {
+    fields: [boostedAds.adId],
+    references: [ads.id],
+  }),
+  promotion: one(boostPromotions, {
+    fields: [boostedAds.promotionId],
+    references: [boostPromotions.id],
   }),
 }));
 
@@ -202,6 +255,25 @@ export const insertNotificationSchema = createInsertSchema(notifications).omit({
   read: true,
 });
 
+export const insertBoostPromotionSchema = createInsertSchema(boostPromotions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBoostedAdSchema = createInsertSchema(boostedAds).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  startDate: true,
+  endDate: true,
+  active: true,
+}).extend({
+  payerCpf: z.string().length(11, "CPF deve ter 11 dígitos"),
+  payerName: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
+  payerLastName: z.string().min(2, "Sobrenome deve ter pelo menos 2 caracteres"),
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -227,10 +299,23 @@ export type InsertSiteSetting = z.infer<typeof insertSiteSettingSchema>;
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 
+export type BoostPromotion = typeof boostPromotions.$inferSelect;
+export type InsertBoostPromotion = z.infer<typeof insertBoostPromotionSchema>;
+
+export type BoostedAd = typeof boostedAds.$inferSelect;
+export type InsertBoostedAd = z.infer<typeof insertBoostedAdSchema>;
+
 // Extended types with relations
 export type AdWithDetails = Ad & {
   user: User;
   category: Category | null;
   isFavorited?: boolean;
   favoritesCount?: number;
+  isPromoted?: boolean;
+  promotionEndDate?: Date;
+};
+
+export type BoostedAdWithDetails = BoostedAd & {
+  ad: AdWithDetails;
+  promotion: BoostPromotion;
 };

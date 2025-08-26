@@ -4,14 +4,15 @@ import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./auth";
 import { createDefaultAdmin, authenticateAdmin, generateAdminToken, isAdminAuthenticated } from "./admin-auth";
 import { authenticateUser, registerUser, generateUserToken, requireAuth } from "./user-auth";
-import { insertAdSchema, insertFavoriteSchema, loginUserSchema, registerUserSchema } from "@shared/schema";
+import { insertAdSchema, insertFavoriteSchema, loginUserSchema, registerUserSchema, insertBoostedAdSchema, insertBoostPromotionSchema } from "@shared/schema";
+import { mercadoPagoService } from "./mercadopago";
 import { z } from "zod";
 
 // Expired ads cleanup service
 function startExpiredAdsCleanup() {
   const cleanupExpiredAds = async () => {
     try {
-      console.log("Running expired ads cleanup...");
+      console.log("Running expired ads and boosted ads cleanup...");
       
       // Get all expired ads that are still active
       const expiredAds = await storage.getExpiredAds();
@@ -34,6 +35,9 @@ function startExpiredAdsCleanup() {
           await storage.decrementUserAdsCount(ad.userId);
         }
       }
+      
+      // Expire old boosted ads
+      await storage.expireOldBoostedAds();
       
       if (expiredAds.length > 0) {
         console.log(`Cleaned up ${expiredAds.length} expired ads`);
@@ -99,6 +103,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     await storage.setSetting("ad_duration_days", "30", "number");
   } catch (error) {
     console.log("Default settings initialization error:", error);
+  }
+
+  // Initialize default boost promotions
+  try {
+    const existingPromotions = await storage.getBoostPromotions();
+    if (existingPromotions.length === 0) {
+      await storage.createBoostPromotion({
+        name: "Impulso Básico",
+        price: "9.99",
+        durationDays: "5",
+        description: "Coloque seu anúncio em destaque por 5 dias e aumente suas chances de venda!",
+        active: true
+      });
+      
+      await storage.createBoostPromotion({
+        name: "Impulso Premium",
+        price: "19.99", 
+        durationDays: "10",
+        description: "Máxima visibilidade! Destaque seu anúncio por 10 dias completos.",
+        active: true
+      });
+    }
+  } catch (error) {
+    console.log("Default boost promotions initialization error:", error);
   }
 
   // User authentication routes
@@ -448,6 +476,151 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Boost promotion routes (public)
+  app.get('/api/boost/promotions', async (req, res) => {
+    try {
+      const promotions = await storage.getBoostPromotions();
+      res.json(promotions);
+    } catch (error) {
+      console.error("Error fetching boost promotions:", error);
+      res.status(500).json({ message: "Erro ao buscar promoções" });
+    }
+  });
+
+  // Get featured/boosted ads for homepage
+  app.get('/api/ads/featured', async (req, res) => {
+    try {
+      const boostedAds = await storage.getActiveBoostedAds();
+      res.json(boostedAds);
+    } catch (error) {
+      console.error("Error fetching featured ads:", error);
+      res.status(500).json({ message: "Erro ao buscar anúncios em destaque" });
+    }
+  });
+
+  // Create boost payment (no auth required - public boost)
+  app.post('/api/boost/create', async (req, res) => {
+    try {
+      const validatedData = insertBoostedAdSchema.parse(req.body);
+      
+      // Verify ad exists
+      const ad = await storage.getAdById(validatedData.adId);
+      if (!ad) {
+        return res.status(404).json({ message: "Anúncio não encontrado" });
+      }
+
+      // Verify promotion exists
+      const promotion = await storage.getBoostPromotion(validatedData.promotionId);
+      if (!promotion) {
+        return res.status(404).json({ message: "Promoção não encontrada" });
+      }
+
+      // Create boosted ad record
+      const boostedAd = await storage.createBoostedAd({
+        ...validatedData,
+        amount: promotion.price,
+      });
+
+      // Create MercadoPago PIX payment
+      const payment = await mercadoPagoService.createPixPayment({
+        amount: parseFloat(promotion.price),
+        description: `${promotion.name} - ${ad.title}`,
+        payerName: validatedData.payerName,
+        payerLastName: validatedData.payerLastName,
+        payerCpf: validatedData.payerCpf,
+        payerEmail: validatedData.payerEmail,
+        payerPhone: validatedData.payerPhone,
+        externalReference: boostedAd.id,
+      });
+
+      // Update boosted ad with payment ID
+      await storage.updateBoostedAd(boostedAd.id, {
+        paymentId: payment.id?.toString(),
+      });
+
+      res.status(201).json({
+        boostedAd,
+        payment: {
+          id: payment.id,
+          qr_code: payment.qr_code,
+          qr_code_base64: payment.qr_code_base64,
+          status: payment.status
+        }
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
+      }
+      console.error("Error creating boost:", error);
+      res.status(500).json({ message: "Erro ao criar impulsionamento" });
+    }
+  });
+
+  // Check boost payment status
+  app.get('/api/boost/status/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const boostedAd = await storage.getBoostedAd(id);
+      
+      if (!boostedAd) {
+        return res.status(404).json({ message: "Impulsionamento não encontrado" });
+      }
+
+      if (boostedAd.paymentId) {
+        try {
+          const payment = await mercadoPagoService.getPayment(boostedAd.paymentId);
+          
+          // Update payment status if it changed
+          if (payment.status !== boostedAd.paymentStatus) {
+            await storage.updateBoostedAdPaymentStatus(
+              boostedAd.paymentId, 
+              payment.status,
+              payment.status === 'approved' ? new Date() : undefined
+            );
+          }
+          
+          res.json({
+            ...boostedAd,
+            paymentStatus: payment.status,
+            paymentDetails: payment
+          });
+        } catch (mpError) {
+          console.error("Error fetching payment from MercadoPago:", mpError);
+          res.json(boostedAd);
+        }
+      } else {
+        res.json(boostedAd);
+      }
+    } catch (error) {
+      console.error("Error checking boost status:", error);
+      res.status(500).json({ message: "Erro ao verificar status do impulsionamento" });
+    }
+  });
+
+  // MercadoPago webhook
+  app.post('/api/boost/webhook', async (req, res) => {
+    try {
+      const notification = mercadoPagoService.processWebhookNotification(req.body);
+      
+      if (notification.type === 'payment') {
+        const payment = await mercadoPagoService.getPayment(notification.data_id);
+        
+        if (payment.external_reference) {
+          await storage.updateBoostedAdPaymentStatus(
+            notification.data_id,
+            payment.status,
+            payment.status === 'approved' ? new Date(payment.date_approved || new Date()) : undefined
+          );
+        }
+      }
+      
+      res.status(200).json({ received: true });
+    } catch (error) {
+      console.error("Error processing webhook:", error);
+      res.status(500).json({ message: "Erro ao processar webhook" });
+    }
+  });
+
   // Admin authentication routes
   app.post('/api/admin/login', async (req, res) => {
     try {
@@ -664,6 +837,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating settings:", error);
       res.status(500).json({ message: "Erro ao atualizar configurações" });
+    }
+  });
+
+  // Admin boost promotion management routes
+  app.get('/api/admin/boost/promotions', async (req: any, res) => {
+    try {
+      const promotions = await storage.getBoostPromotions();
+      res.json(promotions);
+    } catch (error) {
+      console.error("Error fetching boost promotions:", error);
+      res.status(500).json({ message: "Erro ao buscar promoções" });
+    }
+  });
+
+  app.post('/api/admin/boost/promotions', async (req: any, res) => {
+    try {
+      const validatedData = insertBoostPromotionSchema.parse(req.body);
+      const promotion = await storage.createBoostPromotion(validatedData);
+      res.status(201).json(promotion);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
+      }
+      console.error("Error creating boost promotion:", error);
+      res.status(500).json({ message: "Erro ao criar promoção" });
+    }
+  });
+
+  app.put('/api/admin/boost/promotions/:id', async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const validatedData = insertBoostPromotionSchema.partial().parse(req.body);
+      const promotion = await storage.updateBoostPromotion(id, validatedData);
+      
+      if (!promotion) {
+        return res.status(404).json({ message: "Promoção não encontrada" });
+      }
+      
+      res.json(promotion);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
+      }
+      console.error("Error updating boost promotion:", error);
+      res.status(500).json({ message: "Erro ao atualizar promoção" });
+    }
+  });
+
+  app.delete('/api/admin/boost/promotions/:id', async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteBoostPromotion(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Promoção não encontrada" });
+      }
+      
+      res.json({ message: "Promoção deletada com sucesso" });
+    } catch (error) {
+      console.error("Error deleting boost promotion:", error);
+      res.status(500).json({ message: "Erro ao deletar promoção" });
+    }
+  });
+
+  // Admin boosted ads management routes
+  app.get('/api/admin/boost/ads', async (req: any, res) => {
+    try {
+      const boostedAds = await storage.getAllBoostedAds();
+      res.json(boostedAds);
+    } catch (error) {
+      console.error("Error fetching boosted ads:", error);
+      res.status(500).json({ message: "Erro ao buscar anúncios impulsionados" });
+    }
+  });
+
+  app.patch('/api/admin/boost/ads/:id/toggle', async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { active } = req.body;
+      
+      const updated = await storage.updateBoostedAd(id, { active });
+      
+      if (!updated) {
+        return res.status(404).json({ message: "Anúncio impulsionado não encontrado" });
+      }
+      
+      res.json({ message: active ? "Impulsionamento ativado" : "Impulsionamento desativado" });
+    } catch (error) {
+      console.error("Error toggling boosted ad status:", error);
+      res.status(500).json({ message: "Erro ao alterar status do impulsionamento" });
     }
   });
 

@@ -16,8 +16,8 @@ export default function Home() {
     queryKey: ["/api/ads", { search: searchQuery, ...filters }],
   });
 
-  const { data: featuredAds = [] } = useQuery<AdWithDetails[]>({
-    queryKey: ["/api/ads", { featured: true }],
+  const { data: boostedAds = [] } = useQuery<AdWithDetails[]>({
+    queryKey: ["/api/ads/featured"],
   });
 
   const { data: categories = [] } = useQuery<Category[]>({
@@ -47,12 +47,13 @@ export default function Home() {
       <SearchSection onSearch={handleSearch} onFilterChange={handleFilterChange} />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
-        {/* Featured Ads Section */}
-        {featuredAds.length > 0 && (
+        {/* Boosted Ads Section */}
+        {boostedAds.length > 0 && (
           <section className="animate-fade-in">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                Anúncios em Destaque
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <span className="text-yellow-500">⭐</span>
+                Anúncios Impulsionados
               </h2>
               <Button
                 variant="ghost"
@@ -63,8 +64,23 @@ export default function Home() {
               </Button>
             </div>
             
+            {/* Highlight banner for boosted ads */}
+            <div className="bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 p-4 rounded-xl mb-6 text-white">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-white/20 rounded-lg">
+                  <span className="text-2xl">🚀</span>
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg">Anúncios em Destaque</h3>
+                  <p className="text-sm opacity-90">
+                    Estes anúncios foram impulsionados pelos vendedores para ter maior visibilidade!
+                  </p>
+                </div>
+              </div>
+            </div>
+            
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {featuredAds.slice(0, 3).map((ad) => (
+              {boostedAds.slice(0, 6).map((ad) => (
                 <AdCard key={ad.id} ad={ad} variant="featured" />
               ))}
             </div>

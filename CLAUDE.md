@@ -41,6 +41,12 @@ SESSION_SECRET=your_super_secret_session_key_here
 # Ambiente
 NODE_ENV=production
 PORT=5000
+
+# MercadoPago Integration (para pagamentos PIX)
+MERCADOPAGO_ACCESS_TOKEN=your_mercadopago_access_token_here
+
+# URL base da aplicação (para webhooks do MercadoPago)
+BASE_URL=http://localhost:5000
 ```
 
 ### Comandos Disponíveis
@@ -63,6 +69,8 @@ PORT=5000
 - `SESSION_SECRET` - Chave para sessões
 - `NODE_ENV=production`
 - `PORT=5000`
+- `MERCADOPAGO_ACCESS_TOKEN` - Token de acesso do Mercado Pago para PIX
+- `BASE_URL` - URL base da aplicação (para webhooks)
 
 ## Banco de Dados
 
@@ -72,6 +80,8 @@ PORT=5000
 - **ads** - Anúncios/produtos
 - **favorites** - Favoritos dos usuários
 - **sessions** - Sessões de usuário
+- **boost_promotions** - Promoções de impulsionamento (preços e configurações)
+- **boosted_ads** - Anúncios impulsionados com dados de pagamento PIX
 
 ### Migrações
 Execute `npm run db:push` para aplicar o esquema no banco.
@@ -87,8 +97,18 @@ Execute `npm run db:push` para aplicar o esquema no banco.
   - Roupas, Esportes, Livros, Outros
 - **Contato WhatsApp** - Negociação direta com vendedores
 - **Interface PWA** - Responsivo mobile/desktop
+- **Sistema de Impulsionamento** - Anúncios pagos com PIX via Mercado Pago:
+  - Promoções configuráveis (preço, duração)
+  - Pagamento PIX instantâneo
+  - Seção de destaque na homepage
+  - Expiração automática (5-10 dias)
+  - Badge "Destaque" nos anúncios impulsionados
+- **Painel Administrativo Completo**:
+  - Gerenciamento de promoções de boost
+  - Controle de anúncios impulsionados
+  - Relatórios de receita e estatísticas
 - **Páginas Funcionais**:
-  - **Home** - Lista de produtos com filtros
+  - **Home** - Lista de produtos com seção de anúncios impulsionados
   - **Criar** - Formulário de anúncios
   - **Info** - Informações e dicas de segurança
 
@@ -117,9 +137,29 @@ Execute `npm run db:push` para aplicar o esquema no banco.
 - `GET /api/categories` - **Listar categorias** (público)
   - Response: 8 categorias padrão com ícones
 
+#### Sistema de Impulsionamento
+- `GET /api/boost/promotions` - **Listar promoções** (público)
+  - Response: Array de promoções ativas com preços e durações
+- `POST /api/boost/create` - **Criar impulsionamento** (público, sem auth)
+  - Body: `adId`, `promotionId`, `payerName`, `payerLastName`, `payerCpf`, `payerEmail?`, `payerPhone?`
+  - Response: QR Code PIX e dados do pagamento
+- `GET /api/boost/status/:id` - **Status do pagamento** (público)
+  - Response: Status do pagamento e detalhes do impulsionamento
+- `POST /api/boost/webhook` - Webhook do Mercado Pago (interno)
+- `GET /api/ads/featured` - **Anúncios impulsionados ativos** (público)
+  - Response: Array de anúncios em destaque
+
 #### Sistema
 - `GET /api/auth/user` - Retorna `null` (sem autenticação)
 - `GET /` - Frontend React PWA
+
+#### Administração - Sistema de Impulsionamento
+- `GET /api/admin/boost/promotions` - Listar todas as promoções
+- `POST /api/admin/boost/promotions` - Criar nova promoção
+- `PUT /api/admin/boost/promotions/:id` - Editar promoção
+- `DELETE /api/admin/boost/promotions/:id` - Deletar promoção
+- `GET /api/admin/boost/ads` - Listar todos os anúncios impulsionados
+- `PATCH /api/admin/boost/ads/:id/toggle` - Ativar/pausar impulsionamento
 
 ### ❌ Endpoints Desabilitados (Retornam 501)
 - `PATCH /api/ads/:id` - Editar produto 
@@ -135,6 +175,34 @@ Execute `npm run db:push` para aplicar o esquema no banco.
 - SQL injection protegido pelo Drizzle ORM
 - CORS configurado
 - Rate limiting (recomendado para produção)
+- Pagamentos seguros via Mercado Pago
+
+## Configuração do Sistema de Impulsionamento
+
+### 1. Configuração do Mercado Pago
+1. Crie uma conta no [Mercado Pago Developers](https://www.mercadopago.com.br/developers)
+2. Obtenha seu **Access Token** (sandbox para testes, produção para ambiente real)
+3. Configure a variável `MERCADOPAGO_ACCESS_TOKEN` no .env
+4. Configure a `BASE_URL` para receber webhooks de pagamento
+
+### 2. Como Funciona
+1. **Usuário acessa o botão "Impulsionar"** em qualquer anúncio
+2. **Escolhe uma promoção** (Básico 5 dias, Premium 10 dias, etc.)
+3. **Preenche dados** (Nome, Sobrenome, CPF obrigatórios)
+4. **Sistema gera PIX** via Mercado Pago com QR Code
+5. **Usuário paga PIX** pelo app do banco
+6. **Webhook confirma pagamento** automaticamente
+7. **Anúncio vai para seção destaque** imediatamente
+8. **Expira automaticamente** após o período contratado
+
+### 3. Administração
+- **Painel Admin > Promoções**: Configure preços e durações
+- **Painel Admin > Impulsionados**: Monitore pagamentos e status
+- **Relatórios**: Visualize receita total e estatísticas
+
+### 4. Preços Padrão (configuráveis)
+- **Impulso Básico**: R$ 9,99 por 5 dias
+- **Impulso Premium**: R$ 19,99 por 10 dias
 
 ## Performance ⚡
 
