@@ -70,12 +70,26 @@ export default function CreateAd() {
 
   const createAdMutation = useMutation({
     mutationFn: async (data: InsertAd) => {
-      return await userAuth.apiCall("/api/ads", {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
+      console.log("=== MUTATION EXECUTION ===");
+      console.log("9. Mutation called with data:", data);
+      console.log("10. Making API call...");
+      
+      try {
+        const response = await userAuth.apiCall("/api/ads", {
+          method: "POST",
+          body: JSON.stringify(data),
+        });
+        console.log("11. API response:", response);
+        return response;
+      } catch (error) {
+        console.log("12. API error:", error);
+        throw error;
+      }
     },
-    onSuccess: () => {
+    onSuccess: (response) => {
+      console.log("=== MUTATION SUCCESS ===");
+      console.log("13. Success callback called with:", response);
+      
       queryClient.invalidateQueries({ queryKey: ["/api/ads"] });
       queryClient.invalidateQueries({ queryKey: ["/api/user/ads"] });
       toast({
@@ -94,6 +108,8 @@ export default function CreateAd() {
       }, 1000);
     },
     onError: (error: any) => {
+      console.log("=== MUTATION ERROR ===");
+      console.log("13. Error callback called with:", error);
       console.error("Failed to create ad:", error);
       
       toast({
@@ -156,8 +172,17 @@ export default function CreateAd() {
   }
 
   const onSubmit = (data: InsertAd) => {
+    console.log("=== FORM SUBMISSION DEBUG ===");
+    console.log("1. onSubmit called with data:", data);
+    console.log("2. Form errors:", form.formState.errors);
+    console.log("3. Form is valid:", form.formState.isValid);
+    console.log("4. Form values:", form.getValues());
+    
     const user = userAuth.getUser();
+    console.log("5. User from auth:", user);
+    
     if (!user) {
+      console.log("6. No user - redirecting to login");
       toast({
         title: "Erro de autenticação",
         description: "Você precisa estar logado para criar um anúncio.",
@@ -167,13 +192,16 @@ export default function CreateAd() {
       return;
     }
     
-    // Debug logs removed for production
-    
-    createAdMutation.mutate({
+    const payload = {
       ...data,
       userId: user.id,
       imageUrl: imagePreview || undefined,
-    });
+    };
+    
+    console.log("7. Final payload:", payload);
+    console.log("8. Calling mutation...");
+    
+    createAdMutation.mutate(payload);
   };
 
   const compressImage = (file: File): Promise<string> => {
@@ -287,7 +315,22 @@ export default function CreateAd() {
           <CardTitle className="text-2xl font-bold">Criar Novo Anúncio</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(
+            (data) => {
+              console.log("=== FORM HANDLESUBMIT SUCCESS ===");
+              console.log("handleSubmit success called with:", data);
+              onSubmit(data);
+            },
+            (errors) => {
+              console.log("=== FORM HANDLESUBMIT ERROR ===");
+              console.log("handleSubmit error called with:", errors);
+              toast({
+                title: "Erro no formulário",
+                description: "Verifique os campos obrigatórios.",
+                variant: "destructive",
+              });
+            }
+          )} className="space-y-6">
             <div>
               <Label htmlFor="title" className="text-sm font-medium">
                 Título do anúncio *
@@ -461,6 +504,21 @@ export default function CreateAd() {
                     ? "bg-emerald-400 cursor-not-allowed" 
                     : "bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800"
                 } text-white shadow-md hover:shadow-lg active:shadow-sm`}
+                onClick={(e) => {
+                  console.log("=== BUTTON CLICK DEBUG ===");
+                  console.log("Button clicked!", e);
+                  console.log("Form state:", {
+                    isSubmitting: form.formState.isSubmitting,
+                    isValid: form.formState.isValid,
+                    errors: form.formState.errors,
+                    values: form.getValues()
+                  });
+                  console.log("Mutation state:", {
+                    isPending: createAdMutation.isPending,
+                    isError: createAdMutation.isError,
+                    error: createAdMutation.error
+                  });
+                }}
                 data-testid="button-create-ad"
               >
                 {createAdMutation.isPending ? (
@@ -474,6 +532,23 @@ export default function CreateAd() {
                     Publicar Anúncio
                   </>
                 )}
+              </Button>
+            </div>
+            
+            {/* DEBUG: Alternative button to bypass form validation */}
+            <div className="pt-4 border-t mt-4">
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => {
+                  console.log("=== BYPASS BUTTON CLICKED ===");
+                  const formValues = form.getValues();
+                  console.log("Manual form values:", formValues);
+                  onSubmit(formValues);
+                }}
+                className="w-full"
+              >
+                🚨 DEBUG: Forçar Envio (Bypass Validation)
               </Button>
             </div>
           </form>
