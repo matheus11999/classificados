@@ -133,8 +133,8 @@ export default function NotificationsPanel({ isOpen, onClose }: NotificationsPan
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-gray-900 rounded-lg w-full max-w-md max-h-[80vh] flex flex-col">
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div className="bg-white dark:bg-gray-900 rounded-t-lg sm:rounded-lg w-full sm:max-w-md h-[90vh] sm:max-h-[80vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center space-x-2">

@@ -112,12 +112,12 @@ Execute `npm run db:push` para aplicar o esquema no banco.
   - **Criar** - Formulário de anúncios
   - **Info** - Informações e dicas de segurança
 
-### ❌ Recursos Desabilitados (Por Design)
-- Sistema de usuários/login
-- Favoritos (requer autenticação)
-- Gerenciamento de anúncios por usuário
-- Edição/exclusão de anúncios
-- Histórico de anúncios por usuário
+### ✅ Sistema de Usuários e Autenticação (Ativo)
+- **Login/Registro** - Sistema completo de usuários
+- **Dashboard do Usuário** - Interface "Meu Perfil" estilo app nativo
+- **Gerenciamento de Anúncios** - CRUD completo de anúncios por usuário
+- **Sistema de Notificações** - Modal funcional tipo app social
+- **Perfil de Usuário** - Edição de dados pessoais incluindo CPF
 
 ## API Endpoints
 
@@ -129,9 +129,11 @@ Execute `npm run db:push` para aplicar o esquema no banco.
   - Response: Array de produtos com detalhes completos
 - `GET /api/ads/:id` - **Detalhes do produto** (público)
   - Response: Produto individual com informações do vendedor
-- `POST /api/ads` - **Criar produto** (público, sem autenticação)
+- `POST /api/ads` - **Criar produto** (requer autenticação)
   - Body: `title`, `description`, `price`, `location`, `whatsapp`, `categoryId`, `imageUrl`
   - Response: Produto criado com ID gerado
+- `PATCH /api/ads/:id` - **Editar produto** (requer autenticação)
+- `DELETE /api/ads/:id` - **Pausar produto** (requer autenticação)
 
 #### Categorias
 - `GET /api/categories` - **Listar categorias** (público)
@@ -149,8 +151,20 @@ Execute `npm run db:push` para aplicar o esquema no banco.
 - `GET /api/ads/featured` - **Anúncios impulsionados ativos** (público)
   - Response: Array de anúncios em destaque
 
+#### Autenticação e Usuário
+- `POST /api/auth/login` - **Login de usuário**
+- `POST /api/auth/register` - **Registro de usuário**
+- `GET /api/auth/user` - **Dados do usuário logado**
+- `GET /api/user/ads` - **Anúncios do usuário**
+- `PUT /api/user/profile` - **Atualizar perfil**
+- `POST /api/upload/image` - **Upload de imagens**
+
+#### Notificações
+- `GET /api/notifications` - **Listar notificações do usuário**
+- `PATCH /api/notifications/:id/read` - **Marcar como lida**
+- `DELETE /api/notifications/:id` - **Deletar notificação**
+
 #### Sistema
-- `GET /api/auth/user` - Retorna `null` (sem autenticação)
 - `GET /` - Frontend React PWA
 
 #### Administração - Sistema de Impulsionamento
@@ -162,12 +176,7 @@ Execute `npm run db:push` para aplicar o esquema no banco.
 - `PATCH /api/admin/boost/ads/:id/toggle` - Ativar/pausar impulsionamento
 
 ### ❌ Endpoints Desabilitados (Retornam 501)
-- `PATCH /api/ads/:id` - Editar produto 
-- `DELETE /api/ads/:id` - Deletar produto
-- `GET /api/user/ads` - Meus anúncios
-- `GET/POST/DELETE /api/favorites/*` - Sistema de favoritos
-- `/api/login` - Sistema de login
-- `/api/logout` - Sistema de logout
+- `GET/POST/DELETE /api/favorites/*` - Sistema de favoritos (futuro)
 
 ## Segurança
 - Sessões seguras com PostgreSQL
@@ -230,6 +239,12 @@ Execute `npm run db:push` para aplicar o esquema no banco.
 5. **Frontend PWA** - Assets servidos corretamente
 6. **Categorias** - 8 categorias pré-criadas
 7. **Container Docker** - Estável e funcional
+8. **Interface Nativa** - UserDashboard reformulado como "Meu Perfil"
+9. **Sistema de Notificações** - Modal funcional tipo app social
+10. **Upload de Imagens** - Endpoint implementado com base64
+11. **Filtros de Categoria** - Navegação dinâmica funcionando
+12. **Deleção de Anúncios** - Endpoint DELETE implementado
+13. **Campo CPF** - Adicionado ao perfil para impulsionamento
 
 ### Build Pipeline
 ```bash
@@ -259,7 +274,9 @@ Execute `npm run db:push` para aplicar o esquema no banco.
 ## Roadmap 🚀
 
 ### Próximas Funcionalidades
-- [ ] Upload real de imagens (atualmente placeholder)
+- [x] Upload real de imagens ✅
+- [x] Sistema de notificações funcional ✅
+- [x] Interface nativa para mobile ✅
 - [ ] Sistema de avaliações e feedback
 - [ ] Cache Redis para performance  
 - [ ] Analytics e métricas de uso
@@ -268,6 +285,7 @@ Execute `npm run db:push` para aplicar o esquema no banco.
 - [ ] Monitoramento com Winston logs
 - [ ] Deploy multi-ambiente
 - [ ] CDN para assets estáticos
+- [ ] Sistema de favoritos
 
 ### Funcionalidades Avançadas (Futuro)
 - [ ] Chat integrado entre compradores/vendedores

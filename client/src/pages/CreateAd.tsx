@@ -148,11 +148,48 @@ export default function CreateAd() {
     });
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // For demo purposes, we'll use a placeholder image
-      setImagePreview("https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400&h=300&fit=crop");
+      // Check file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          title: "Erro",
+          description: "A imagem deve ter no máximo 5MB",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Convert to base64 for upload
+      const reader = new FileReader();
+      reader.onload = async () => {
+        try {
+          const base64 = (reader.result as string).split(',')[1];
+          
+          const response = await userAuth.apiCall('/api/upload/image', {
+            method: 'POST',
+            body: JSON.stringify({
+              imageData: base64,
+              fileName: file.name
+            })
+          });
+
+          setImagePreview(response.imageUrl);
+          toast({
+            title: "Sucesso",
+            description: "Imagem carregada com sucesso!",
+          });
+        } catch (error) {
+          console.error("Error uploading image:", error);
+          toast({
+            title: "Erro",
+            description: "Erro ao carregar imagem",
+            variant: "destructive",
+          });
+        }
+      };
+      reader.readAsDataURL(file);
     }
   };
 

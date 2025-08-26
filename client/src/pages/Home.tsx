@@ -12,12 +12,16 @@ export default function Home() {
   const [filters, setFilters] = useState<{ category?: string; location?: string }>({});
   const [createAdOpen, setCreateAdOpen] = useState(false);
 
+  const buildAdsUrl = () => {
+    const params = new URLSearchParams();
+    if (searchQuery) params.append('search', searchQuery);
+    if (filters.category) params.append('categoryId', filters.category);
+    if (filters.location) params.append('location', filters.location);
+    return `/api/ads?${params.toString()}`;
+  };
+
   const { data: ads = [], isLoading: adsLoading } = useQuery<AdWithDetails[]>({
-    queryKey: ["/api/ads", { 
-      search: searchQuery, 
-      categoryId: filters.category,
-      location: filters.location
-    }],
+    queryKey: [buildAdsUrl()],
   });
 
   const { data: boostedAds = [] } = useQuery<AdWithDetails[]>({

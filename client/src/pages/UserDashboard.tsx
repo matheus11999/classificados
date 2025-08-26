@@ -46,6 +46,7 @@ export default function UserDashboard() {
     firstName: user?.firstName || "",
     lastName: user?.lastName || "",
     whatsapp: user?.whatsapp || "",
+    cpf: user?.cpf || "",
   });
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
@@ -498,6 +499,24 @@ export default function UserDashboard() {
                 />
                 <p className="text-sm text-gray-600 dark:text-gray-400">
                   Número para contato nos seus anúncios
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="cpf">CPF</Label>
+                <Input
+                  id="cpf"
+                  value={profileData.cpf}
+                  onChange={(e) => {
+                    // Remove non-digits and limit to 11 characters
+                    const value = e.target.value.replace(/\D/g, '').slice(0, 11);
+                    setProfileData({ ...profileData, cpf: value });
+                  }}
+                  placeholder="00000000000"
+                  maxLength={11}
+                />
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Necessário para impulsionar anúncios (apenas números)
                 </p>
               </div>
             </div>

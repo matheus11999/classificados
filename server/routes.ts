@@ -307,6 +307,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Image upload endpoint
+  app.post('/api/upload/image', requireAuth, async (req: any, res) => {
+    try {
+      const { imageData, fileName } = req.body;
+      
+      if (!imageData) {
+        return res.status(400).json({ message: "Nenhuma imagem fornecida" });
+      }
+
+      // For now, we'll just return the base64 data URL
+      // In production, you'd save to cloud storage (AWS S3, Cloudinary, etc.)
+      const imageUrl = `data:image/jpeg;base64,${imageData}`;
+      
+      res.json({ imageUrl });
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      res.status(500).json({ message: "Erro ao fazer upload da imagem" });
+    }
+  });
+
   // User ad management routes
   app.get('/api/user/ads', requireAuth, async (req: any, res) => {
     try {
@@ -335,6 +355,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating ad:", error);
       res.status(500).json({ message: "Erro ao atualizar anúncio" });
+    }
+  });
+
+  app.delete('/api/ads/:id', requireAuth, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.id;
+      
+      // Instead of deleting, we'll just deactivate the ad
+      const ad = await storage.updateAd(id, { active: false }, userId);
+      
+      if (!ad) {
+        return res.status(404).json({ message: "Anúncio não encontrado ou sem permissão" });
+      }
+      
+      // Create notification
+      await storage.createNotification({
+        userId,
+        title: "Anúncio pausado",
+        message: `Seu anúncio "${ad.title}" foi pausado com sucesso`,
+        type: "info",
+        adId: ad.id
+      });
+      
+      res.json({ message: "Anúncio pausado com sucesso" });
+    } catch (error) {
+      console.error("Error deleting ad:", error);
+      res.status(500).json({ message: "Erro ao pausar anúncio" });
     }
   });
 

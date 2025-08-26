@@ -34,6 +34,7 @@ export const users = pgTable("users", {
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   whatsapp: varchar("whatsapp"),
+  cpf: varchar("cpf", { length: 11 }),
   active: boolean("active").default(true),
   activeAdsCount: decimal("active_ads_count").default("0"),
   createdAt: timestamp("created_at").defaultNow(),
