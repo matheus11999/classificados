@@ -168,6 +168,12 @@ class UserAuthService {
     });
   }
 
+  async deleteNotification(notificationId: string): Promise<void> {
+    await this.apiCall(`/api/notifications/${notificationId}`, {
+      method: 'DELETE',
+    });
+  }
+
   // Check if user can create more ads
   canCreateAd(maxAds: number): boolean {
     if (!this.user) return false;

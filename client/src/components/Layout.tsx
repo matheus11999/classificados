@@ -1,6 +1,7 @@
 import { ReactNode, useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import BottomNavigation from "./BottomNavigation";
+import NotificationsPanel from "./NotificationsPanel";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Moon, Sun, Bell, User, LogIn, LogOut, Settings } from "lucide-react";
@@ -18,6 +19,7 @@ export default function Layout({ children }: LayoutProps) {
   const { toast } = useToast();
   const [user, setUser] = useState(userAuth.getUser());
   const [notifications, setNotifications] = useState<any[]>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   useEffect(() => {
     // Update user state when authentication changes
@@ -99,7 +101,7 @@ export default function Layout({ children }: LayoutProps) {
                     variant="ghost"
                     size="sm"
                     className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 relative"
-                    onClick={() => setLocation("/profile")}
+                    onClick={() => setShowNotifications(true)}
                     data-testid="button-notifications"
                   >
                     <Bell className="h-5 w-5 text-gray-600 dark:text-gray-300" />
@@ -135,7 +137,7 @@ export default function Layout({ children }: LayoutProps) {
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => setLocation("/profile")}>
                         <User className="mr-2 h-4 w-4" />
-                        Meu Dashboard
+                        Meu Perfil
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => setLocation("/create")}>
                         <Settings className="mr-2 h-4 w-4" />
@@ -172,6 +174,12 @@ export default function Layout({ children }: LayoutProps) {
 
       {/* Bottom Navigation */}
       <BottomNavigation />
+
+      {/* Notifications Panel */}
+      <NotificationsPanel 
+        isOpen={showNotifications}
+        onClose={() => setShowNotifications(false)}
+      />
     </div>
   );
 }

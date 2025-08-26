@@ -76,6 +76,7 @@ export interface IStorage {
   getUserNotifications(userId: string): Promise<Notification[]>;
   createNotification(notification: InsertNotification): Promise<Notification>;
   markNotificationAsRead(id: string, userId: string): Promise<boolean>;
+  deleteNotification(id: string, userId: string): Promise<boolean>;
   
   // Admin operations
   getAdminByEmail(email: string): Promise<AdminUser | undefined>;
@@ -645,6 +646,14 @@ export class DatabaseStorage implements IStorage {
     const [notification] = await db
       .update(notifications)
       .set({ read: true })
+      .where(and(eq(notifications.id, id), eq(notifications.userId, userId)))
+      .returning();
+    return !!notification;
+  }
+
+  async deleteNotification(id: string, userId: string): Promise<boolean> {
+    const [notification] = await db
+      .delete(notifications)
       .where(and(eq(notifications.id, id), eq(notifications.userId, userId)))
       .returning();
     return !!notification;

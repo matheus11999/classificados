@@ -1,7 +1,9 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, MapPin, Car, Home, Laptop } from "lucide-react";
+import { Search, MapPin } from "lucide-react";
+import { Category } from "@shared/schema";
 
 interface SearchSectionProps {
   onSearch: (query: string) => void;
@@ -12,13 +14,17 @@ export default function SearchSection({ onSearch, onFilterChange }: SearchSectio
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<string>("");
 
+  const { data: categories = [] } = useQuery<Category[]>({
+    queryKey: ["/api/categories"],
+  });
+
   const handleSearch = (query: string) => {
     setSearchQuery(query);
     onSearch(query);
   };
 
-  const handleFilterClick = (filter: string) => {
-    const newFilter = activeFilter === filter ? "" : filter;
+  const handleFilterClick = (categoryId: string) => {
+    const newFilter = activeFilter === categoryId ? "" : categoryId;
     setActiveFilter(newFilter);
     
     if (newFilter) {
@@ -27,12 +33,6 @@ export default function SearchSection({ onSearch, onFilterChange }: SearchSectio
       onFilterChange({});
     }
   };
-
-  const filters = [
-    { id: "vehicles", label: "Veículos", icon: Car },
-    { id: "real-estate", label: "Imóveis", icon: Home },
-    { id: "electronics", label: "Eletrônicos", icon: Laptop },
-  ];
 
   return (
     <section className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 transition-colors duration-300">
@@ -55,20 +55,20 @@ export default function SearchSection({ onSearch, onFilterChange }: SearchSectio
           
           {/* Filter Chips */}
           <div className="flex space-x-3 overflow-x-auto pb-2">
-            {filters.map(({ id, label, icon: Icon }) => (
+            {categories.map((category) => (
               <Button
-                key={id}
-                variant={activeFilter === id ? "default" : "secondary"}
-                onClick={() => handleFilterClick(id)}
+                key={category.id}
+                variant={activeFilter === category.id ? "default" : "secondary"}
+                onClick={() => handleFilterClick(category.id)}
                 className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                  activeFilter === id
+                  activeFilter === category.id
                     ? "bg-emerald-600 text-white hover:bg-emerald-700"
                     : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
                 }`}
-                data-testid={`filter-${id}`}
+                data-testid={`filter-${category.id}`}
               >
-                <Icon className="w-4 h-4 mr-2" />
-                {label}
+                <i className={`${category.icon} w-4 h-4 mr-2`}></i>
+                {category.name}
               </Button>
             ))}
           </div>

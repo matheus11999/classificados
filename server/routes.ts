@@ -420,6 +420,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete('/api/notifications/:id', requireAuth, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.id;
+      
+      const deleted = await storage.deleteNotification(id, userId);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Notificação não encontrada" });
+      }
+      
+      res.json({ message: "Notificação removida com sucesso" });
+    } catch (error) {
+      console.error("Error deleting notification:", error);
+      res.status(500).json({ message: "Erro ao remover notificação" });
+    }
+  });
+
   // Favorites routes
   app.get('/api/favorites', requireAuth, async (req: any, res) => {
     try {

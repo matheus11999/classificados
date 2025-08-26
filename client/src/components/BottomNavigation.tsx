@@ -22,7 +22,7 @@ export default function BottomNavigation() {
     {
       path: "/profile",
       icon: isAuthenticated ? User : Info,
-      label: isAuthenticated ? "Dashboard" : "Info",
+      label: isAuthenticated ? "Meu Perfil" : "Info",
       testId: "nav-profile",
     },
   ];
