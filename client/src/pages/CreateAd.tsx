@@ -22,6 +22,16 @@ export default function CreateAd() {
   const [maxAds, setMaxAds] = useState(10);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  
+  // Alternative state-based form system
+  const [altFormData, setAltFormData] = useState({
+    title: '',
+    description: '',
+    price: '',
+    location: '',
+    whatsapp: '',
+    categoryId: ''
+  });
 
   useEffect(() => {
     // Check if user is authenticated
@@ -535,8 +545,8 @@ export default function CreateAd() {
               </Button>
             </div>
             
-            {/* DEBUG: Alternative button to bypass form validation */}
-            <div className="pt-4 border-t mt-4">
+            {/* FALLBACK: Alternative submission system */}
+            <div className="pt-4 border-t mt-4 space-y-3">
               <Button
                 type="button"
                 variant="destructive"
@@ -548,7 +558,123 @@ export default function CreateAd() {
                 }}
                 className="w-full"
               >
-                🚨 DEBUG: Forçar Envio (Bypass Validation)
+                🚨 DEBUG: Forçar Envio (React Hook Form)
+              </Button>
+              
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  console.log("=== MANUAL DATA COLLECTION ===");
+                  
+                  // Collect data directly from DOM elements
+                  const title = (document.getElementById('title') as HTMLInputElement)?.value || '';
+                  const description = (document.getElementById('description') as HTMLTextAreaElement)?.value || '';
+                  const price = (document.getElementById('price') as HTMLInputElement)?.value || '';
+                  const location = (document.getElementById('location') as HTMLInputElement)?.value || '';
+                  const whatsapp = (document.getElementById('whatsapp') as HTMLInputElement)?.value || '';
+                  const categorySelect = document.querySelector('[data-testid="select-category"]') as HTMLElement;
+                  const categoryId = form.getValues('categoryId') || '';
+                  
+                  const manualData = {
+                    title,
+                    description,
+                    price,
+                    location,
+                    whatsapp,
+                    categoryId,
+                    imageUrl: imagePreview || undefined
+                  };
+                  
+                  console.log("Manual data collected:", manualData);
+                  
+                  // Basic validation
+                  if (!title.trim()) {
+                    toast({
+                      title: "Título obrigatório",
+                      description: "Por favor, insira um título para o anúncio.",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+                  
+                  if (!description.trim()) {
+                    toast({
+                      title: "Descrição obrigatória", 
+                      description: "Por favor, descreva o produto ou serviço.",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+                  
+                  if (!price.trim()) {
+                    toast({
+                      title: "Preço obrigatório",
+                      description: "Por favor, informe o preço.",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+                  
+                  if (!categoryId.trim()) {
+                    toast({
+                      title: "Categoria obrigatória",
+                      description: "Por favor, selecione uma categoria.",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+                  
+                  if (!whatsapp.trim()) {
+                    toast({
+                      title: "WhatsApp obrigatório",
+                      description: "Por favor, informe seu WhatsApp.",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+                  
+                  // Call onSubmit with manual data
+                  onSubmit(manualData);
+                }}
+                className="w-full"
+              >
+                🔧 ALTERNATIVO: Coletar Dados Manualmente
+              </Button>
+              
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  console.log("=== STATE-BASED SUBMISSION ===");
+                  console.log("State data:", altFormData);
+                  
+                  // Basic validation
+                  const errors = [];
+                  if (!altFormData.title.trim()) errors.push("Título é obrigatório");
+                  if (!altFormData.description.trim()) errors.push("Descrição é obrigatória");
+                  if (!altFormData.price.trim()) errors.push("Preço é obrigatório");
+                  if (!altFormData.categoryId.trim()) errors.push("Categoria é obrigatória");
+                  if (!altFormData.whatsapp.trim()) errors.push("WhatsApp é obrigatório");
+                  
+                  if (errors.length > 0) {
+                    toast({
+                      title: "Campos obrigatórios",
+                      description: errors.join(", "),
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+                  
+                  // Call onSubmit with state data
+                  onSubmit({
+                    ...altFormData,
+                    imageUrl: imagePreview || undefined
+                  });
+                }}
+                className="w-full"
+              >
+                🎯 STATE-BASED: Usar Estado React
               </Button>
             </div>
           </form>
