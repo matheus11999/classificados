@@ -157,11 +157,13 @@ export default function UserDashboard() {
 
   if (loading) {
     return (
-      <div className="max-w-md mx-auto px-4 py-8">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600 mx-auto"></div>
-            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">Carregando...</p>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="max-w-md mx-auto px-4 py-8">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600 mx-auto"></div>
+              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">Carregando...</p>
+            </div>
           </div>
         </div>
       </div>
@@ -176,7 +178,8 @@ export default function UserDashboard() {
   // Profile Menu View
   if (currentView === 'profile') {
     return (
-      <div className="max-w-md mx-auto px-4 py-6 space-y-6">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="max-w-md mx-auto px-4 py-6 space-y-6">
         {/* Profile Header */}
         <div className="text-center space-y-4">
           <div className="relative inline-block">
@@ -325,6 +328,7 @@ export default function UserDashboard() {
             </CardContent>
           </Card>
         </div>
+        </div>
       </div>
     );
   }
@@ -332,7 +336,8 @@ export default function UserDashboard() {
   // Ads View
   if (currentView === 'ads') {
     return (
-      <div className="max-w-md mx-auto px-4 py-6 space-y-6">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="max-w-md mx-auto px-4 py-6 space-y-6">
         {/* Header with Back Button */}
         <div className="flex items-center space-x-3">
           <Button
@@ -433,6 +438,7 @@ export default function UserDashboard() {
             ))
           )}
         </div>
+        </div>
       </div>
     );
   }
@@ -440,7 +446,8 @@ export default function UserDashboard() {
   // Settings View
   if (currentView === 'settings') {
     return (
-      <div className="max-w-md mx-auto px-4 py-6 space-y-6">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="max-w-md mx-auto px-4 py-6 space-y-6">
         {/* Header with Back Button */}
         <div className="flex items-center space-x-3">
           <Button
@@ -546,6 +553,7 @@ export default function UserDashboard() {
             </Button>
           </CardContent>
         </Card>
+        </div>
       </div>
     );
   }

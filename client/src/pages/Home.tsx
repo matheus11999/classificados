@@ -6,11 +6,15 @@ import CreateAdModal from "@/components/CreateAdModal";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { AdWithDetails, Category } from "@shared/schema";
+import ProductDetailsModal from "@/components/ProductDetailsModal";
 
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState<{ category?: string; location?: string }>({});
   const [createAdOpen, setCreateAdOpen] = useState(false);
+  const [showAllRecent, setShowAllRecent] = useState(false);
+  const [showAllFeatured, setShowAllFeatured] = useState(false);
+  const [selectedAd, setSelectedAd] = useState<AdWithDetails | null>(null);
 
   const buildAdsUrl = () => {
     const params = new URLSearchParams();
@@ -32,7 +36,8 @@ export default function Home() {
     queryKey: ["/api/categories"],
   });
 
-  const recentAds = ads.slice(0, 8);
+  const recentAds = showAllRecent ? ads : ads.slice(0, 8);
+  const featuredAdsToShow = showAllFeatured ? boostedAds : boostedAds.slice(1, 9);
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
@@ -40,6 +45,16 @@ export default function Home() {
 
   const handleFilterChange = (newFilters: { category?: string; location?: string }) => {
     setFilters(newFilters);
+  };
+
+  const handleCategoryClick = (categoryId: string) => {
+    setFilters({ category: categoryId });
+    setShowAllRecent(false);
+    setShowAllFeatured(false);
+  };
+
+  const handleAdClick = (ad: AdWithDetails) => {
+    setSelectedAd(ad);
   };
 
   if (adsLoading) {
@@ -110,18 +125,19 @@ export default function Home() {
                 Mais Anúncios Impulsionados
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {boostedAds.slice(1, 9).map((ad) => (
-                  <AdCard key={ad.id} ad={ad} variant="featured" />
+                {featuredAdsToShow.map((ad) => (
+                  <AdCard key={ad.id} ad={ad} variant="featured" onAdClick={handleAdClick} />
                 ))}
               </div>
             </div>
 
             {/* View All Button */}
-            {boostedAds.length > 8 && (
+            {boostedAds.length > 8 && !showAllFeatured && (
               <div className="text-center">
                 <Button
                   variant="outline"
                   className="border-emerald-600 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950"
+                  onClick={() => setShowAllFeatured(true)}
                   data-testid="button-view-all-featured"
                 >
                   Ver Todos os {boostedAds.length} Anúncios Impulsionados
@@ -134,28 +150,44 @@ export default function Home() {
         {/* Recent Ads Section */}
         <section className="animate-fade-in">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-              Anúncios Recentes
-            </h2>
-            <Button
-              variant="ghost"
-              className="text-emerald-600 hover:text-emerald-800 font-medium text-sm"
-              data-testid="button-view-all-recent"
-            >
-              Ver todos
-            </Button>
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                {filters.category ? 
+                  `Anúncios - ${categories.find(c => c.id === filters.category)?.name || 'Categoria'}`
+                  : 'Anúncios Recentes'
+                }
+              </h2>
+              {filters.category && (
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  {ads.length} {ads.length === 1 ? 'anúncio encontrado' : 'anúncios encontrados'}
+                </p>
+              )}
+            </div>
+            {!showAllRecent && ads.length > 8 && (
+              <Button
+                variant="ghost"
+                className="text-emerald-600 hover:text-emerald-800 font-medium text-sm"
+                onClick={() => setShowAllRecent(true)}
+                data-testid="button-view-all-recent"
+              >
+                Ver todos
+              </Button>
+            )}
           </div>
           
           {recentAds.length > 0 ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {recentAds.map((ad) => (
-                <AdCard key={ad.id} ad={ad} variant="compact" />
+                <AdCard key={ad.id} ad={ad} variant="compact" onAdClick={handleAdClick} />
               ))}
             </div>
           ) : (
             <div className="text-center py-12">
               <p className="text-gray-500 dark:text-gray-400">
-                Nenhum anúncio encontrado. Seja o primeiro a publicar!
+                {filters.category ? 
+                  `Nenhum anúncio encontrado nesta categoria. Seja o primeiro a publicar!` :
+                  'Nenhum anúncio encontrado. Seja o primeiro a publicar!'
+                }
               </p>
             </div>
           )}
@@ -175,6 +207,7 @@ export default function Home() {
                 <div
                   key={category.id}
                   className="bg-white dark:bg-gray-800 rounded-xl p-6 text-center shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer transform hover:-translate-y-1"
+                  onClick={() => handleCategoryClick(category.id)}
                   data-testid={`category-${category.id}`}
                 >
                   <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
@@ -203,6 +236,11 @@ export default function Home() {
       </Button>
 
       <CreateAdModal open={createAdOpen} onOpenChange={setCreateAdOpen} />
+      <ProductDetailsModal 
+        ad={selectedAd} 
+        open={!!selectedAd} 
+        onOpenChange={(open) => !open && setSelectedAd(null)} 
+      />
     </div>
   );
 }

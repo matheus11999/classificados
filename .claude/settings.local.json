@@ -13,6 +13,9 @@
       "WebFetch(domain:89.28.236.67)"
     ],
     "deny": [],
-    "ask": []
+    "ask": [],
+    "additionalDirectories": [
+      "C:\\c\\Users\\mat\\Desktop"
+    ]
   }
 }

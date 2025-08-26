@@ -5,9 +5,11 @@ interface User {
   firstName?: string;
   lastName?: string;
   whatsapp?: string;
+  cpf?: string;
   activeAdsCount: string;
   createdAt: string;
   updatedAt: string;
+  profileImageUrl?: string;
 }
 
 interface LoginResponse {

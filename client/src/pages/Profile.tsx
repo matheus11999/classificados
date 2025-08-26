@@ -20,7 +20,8 @@ export default function Profile() {
     return <UserDashboard />;
   }
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
       {/* Header Section */}
       <div className="text-center">
         <div className="w-16 h-16 bg-gradient-to-br from-emerald-600 to-emerald-400 rounded-2xl flex items-center justify-center mx-auto mb-4">
@@ -189,6 +190,7 @@ export default function Profile() {
           </div>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }

@@ -16,9 +16,10 @@ import { BoostButton } from "./BoostButton";
 interface AdCardProps {
   ad: AdWithDetails;
   variant?: "featured" | "compact";
+  onAdClick?: (ad: AdWithDetails) => void;
 }
 
-export default function AdCard({ ad, variant = "featured" }: AdCardProps) {
+export default function AdCard({ ad, variant = "featured", onAdClick }: AdCardProps) {
   const [isFavorited, setIsFavorited] = useState(ad.isFavorited || false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -80,14 +81,18 @@ export default function AdCard({ ad, variant = "featured" }: AdCardProps) {
     favoriteMutation.mutate(ad.id);
   };
 
-  const timeAgo = formatDistanceToNow(new Date(ad.createdAt), {
+  const timeAgo = formatDistanceToNow(ad.createdAt ? new Date(ad.createdAt) : new Date(), {
     addSuffix: true,
     locale: ptBR,
   });
 
   if (variant === "compact") {
     return (
-      <Card className="bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden cursor-pointer transform hover:-translate-y-1" data-testid={`card-ad-${ad.id}`}>
+      <Card 
+        className="bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden cursor-pointer transform hover:-translate-y-1" 
+        onClick={() => onAdClick?.(ad)}
+        data-testid={`card-ad-${ad.id}`}
+      >
         <div className="aspect-square">
           {ad.imageUrl ? (
             <img
@@ -138,7 +143,8 @@ export default function AdCard({ ad, variant = "featured" }: AdCardProps) {
               ad={{ 
                 id: ad.id, 
                 title: ad.title, 
-                price: ad.price 
+                price: ad.price,
+                userId: ad.userId || undefined
               }}
               variant="outline"
               size="sm"
@@ -151,7 +157,11 @@ export default function AdCard({ ad, variant = "featured" }: AdCardProps) {
   }
 
   return (
-    <Card className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden cursor-pointer transform hover:-translate-y-1" data-testid={`card-ad-${ad.id}`}>
+    <Card 
+      className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden cursor-pointer transform hover:-translate-y-1" 
+      onClick={() => onAdClick?.(ad)}
+      data-testid={`card-ad-${ad.id}`}
+    >
       <div className="h-48">
         {ad.imageUrl ? (
           <img
@@ -229,7 +239,8 @@ export default function AdCard({ ad, variant = "featured" }: AdCardProps) {
             ad={{ 
               id: ad.id, 
               title: ad.title, 
-              price: ad.price 
+              price: ad.price,
+              userId: ad.userId || undefined
             }}
             variant="outline"
             size="default"

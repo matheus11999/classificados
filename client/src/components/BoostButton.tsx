@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import { Button } from './ui/button';
 import { Zap } from 'lucide-react';
 import { BoostAdModal } from './BoostAdModal';
+import { userAuth } from '@/lib/user-auth';
 
 interface Ad {
   id: string;
   title: string;
   price: string;
+  userId?: string;
 }
 
 interface BoostButtonProps {
@@ -18,6 +20,12 @@ interface BoostButtonProps {
 
 export function BoostButton({ ad, variant = 'outline', size = 'sm', className = '' }: BoostButtonProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const currentUser = userAuth.getUser();
+  
+  // Only show boost button if user owns this ad
+  if (!currentUser || !ad.userId || ad.userId !== currentUser.id) {
+    return null;
+  }
 
   return (
     <>

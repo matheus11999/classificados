@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertAdSchema, type InsertAd } from "@shared/schema";
+import { insertAdSchema, type InsertAd, type Category } from "@shared/schema";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -46,7 +46,7 @@ export default function CreateAd() {
     loadSettings();
   }, [setLocation]);
 
-  const { data: categories = [] } = useQuery({
+  const { data: categories = [] } = useQuery<Category[]>({
     queryKey: ["/api/categories"],
   });
 
@@ -77,7 +77,7 @@ export default function CreateAd() {
         title: "Anúncio criado com sucesso!",
         description: "Seu anúncio foi publicado e já está visível para outros usuários.",
       });
-      setLocation("/my-ads");
+      setLocation("/profile");
     },
     onError: (error: any) => {
       console.error("Failed to create ad:", error);
@@ -148,53 +148,97 @@ export default function CreateAd() {
     });
   };
 
+  const compressImage = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      
+      img.onload = () => {
+        // Calculate new dimensions (max 1200px width/height)
+        const maxSize = 1200;
+        let { width, height } = img;
+        
+        if (width > height) {
+          if (width > maxSize) {
+            height = (height * maxSize) / width;
+            width = maxSize;
+          }
+        } else {
+          if (height > maxSize) {
+            width = (width * maxSize) / height;
+            height = maxSize;
+          }
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        // Draw and compress
+        ctx?.drawImage(img, 0, 0, width, height);
+        const compressed = canvas.toDataURL('image/jpeg', 0.8);
+        resolve(compressed);
+      };
+      
+      img.onerror = reject;
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Check file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
+      // Check file size (max 10MB for original)
+      if (file.size > 10 * 1024 * 1024) {
         toast({
-          title: "Erro",
-          description: "A imagem deve ter no máximo 5MB",
+          title: "Imagem muito grande",
+          description: "A imagem deve ter no máximo 10MB. Tente usar uma imagem menor.",
           variant: "destructive",
         });
         return;
       }
 
-      // Convert to base64 for upload
-      const reader = new FileReader();
-      reader.onload = async () => {
-        try {
-          const base64 = (reader.result as string).split(',')[1];
-          
-          const response = await userAuth.apiCall('/api/upload/image', {
-            method: 'POST',
-            body: JSON.stringify({
-              imageData: base64,
-              fileName: file.name
-            })
-          });
+      try {
+        // Compress image
+        const compressedDataUrl = await compressImage(file);
+        const base64 = compressedDataUrl.split(',')[1];
+        
+        const response = await userAuth.apiCall('/api/upload/image', {
+          method: 'POST',
+          body: JSON.stringify({
+            imageData: base64,
+            fileName: file.name
+          })
+        });
 
-          setImagePreview(response.imageUrl);
+        setImagePreview(response.imageUrl);
+        toast({
+          title: "Sucesso",
+          description: "Imagem carregada com sucesso!",
+        });
+      } catch (error: any) {
+        console.error("Error uploading image:", error);
+        
+        if (error.message && error.message.includes('request entity too large')) {
           toast({
-            title: "Sucesso",
-            description: "Imagem carregada com sucesso!",
+            title: "Imagem muito grande",
+            description: "A imagem ainda é muito grande após compressão. Use uma imagem menor.",
+            variant: "destructive",
           });
-        } catch (error) {
-          console.error("Error uploading image:", error);
+        } else {
           toast({
             title: "Erro",
-            description: "Erro ao carregar imagem",
+            description: "Erro ao carregar imagem. Tente novamente.",
             variant: "destructive",
           });
         }
-      };
-      reader.readAsDataURL(file);
+      }
     }
   };
 
   return (
-    <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
       <div className="mb-6">
         <Button
           variant="ghost"
@@ -261,7 +305,7 @@ export default function CreateAd() {
                   <SelectValue placeholder="Selecionar categoria" />
                 </SelectTrigger>
                 <SelectContent>
-                  {categories.map((category: any) => (
+                  {categories.map((category) => (
                     <SelectItem key={category.id} value={category.id}>
                       {category.name}
                     </SelectItem>
@@ -360,7 +404,7 @@ export default function CreateAd() {
                         Clique para adicionar uma foto
                       </p>
                       <p className="text-sm text-gray-400">
-                        PNG, JPG até 10MB
+                        PNG, JPG até 10MB (otimização automática)
                       </p>
                     </>
                   )}
@@ -397,6 +441,7 @@ export default function CreateAd() {
           </form>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }
