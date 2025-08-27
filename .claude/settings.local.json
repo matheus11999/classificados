@@ -10,7 +10,10 @@
       "Bash(git push:*)",
       "Bash(npm install:*)",
       "Bash(npm run:*)",
-      "WebFetch(domain:89.28.236.67)"
+      "WebFetch(domain:89.28.236.67)",
+      "Bash(find:*)",
+      "Bash(node:*)",
+      "Bash(timeout 10 npm start)"
     ],
     "deny": [],
     "ask": [],

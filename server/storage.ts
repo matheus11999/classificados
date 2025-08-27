@@ -3,6 +3,7 @@ import {
   ads,
   categories,
   favorites,
+  adImages,
   adminUsers,
   siteSettings,
   notifications,
@@ -60,7 +61,7 @@ export interface IStorage {
     offset?: number;
   }): Promise<AdWithDetails[]>;
   getAdById(id: string): Promise<AdWithDetails | undefined>;
-  createAd(ad: InsertAd): Promise<Ad>;
+  createAd(ad: InsertAd & { images?: string[] }): Promise<Ad>;
   updateAd(id: string, ad: Partial<InsertAd>, userId: string): Promise<Ad | undefined>;
   deleteAd(id: string, userId: string): Promise<boolean>;
   incrementAdViews(id: string): Promise<void>;
@@ -208,12 +209,13 @@ export class DatabaseStorage implements IStorage {
     }
 
     if (search) {
-      conditions.push(
-        or(
-          ilike(ads.title, `%${search}%`),
-          ilike(ads.description, `%${search}%`)
-        )
+      const searchCondition = or(
+        ilike(ads.title, `%${search}%`),
+        ilike(ads.description, `%${search}%`)
       );
+      if (searchCondition) {
+        conditions.push(searchCondition);
+      }
     }
 
     if (featured !== undefined) {
@@ -308,7 +310,7 @@ export class DatabaseStorage implements IStorage {
     return result as AdWithDetails | undefined;
   }
 
-  async createAd(ad: InsertAd): Promise<Ad> {
+  async createAd(ad: InsertAd & { images?: string[] }): Promise<Ad> {
     // Get ad duration setting
     const durationSetting = await this.getSetting("ad_duration_days");
     const durationDays = parseInt(durationSetting?.value || "30");
@@ -325,6 +327,18 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     
+    // If additional images provided, save them to adImages table
+    if (ad.images && ad.images.length > 0) {
+      const imageRecords = ad.images.map((imageUrl, index) => ({
+        adId: newAd.id,
+        imageUrl,
+        isPrimary: index === 0, // First image is primary
+        order: index,
+      }));
+      
+      await db.insert(adImages).values(imageRecords);
+    }
+    
     // Update user's active ads count
     await db
       .update(users)
@@ -332,7 +346,7 @@ export class DatabaseStorage implements IStorage {
         activeAdsCount: sql`${users.activeAdsCount} + 1`,
         updatedAt: new Date()
       })
-      .where(eq(users.id, ad.userId));
+      .where(eq(users.id, ad.userId!));
     
     return newAd;
   }

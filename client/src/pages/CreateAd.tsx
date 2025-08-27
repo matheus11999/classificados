@@ -18,7 +18,8 @@ import { userAuth } from "@/lib/user-auth";
 
 export default function CreateAd() {
   const [, setLocation] = useLocation();
-  const [imagePreview, setImagePreview] = useState<string>("");
+  const [images, setImages] = useState<{ file: File; preview: string; isPrimary: boolean; uploaded?: string }[]>([]);
+  const [uploading, setUploading] = useState(false);
   const [maxAds, setMaxAds] = useState(10);
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -87,7 +88,7 @@ export default function CreateAd() {
       
       // Reset form after successful creation
       form.reset();
-      setImagePreview("");
+      setImages([]);
       
       // Navigate after a short delay for better UX
       setTimeout(() => {
@@ -154,7 +155,7 @@ export default function CreateAd() {
     );
   }
 
-  const onSubmit = (data: InsertAd) => {
+  const onSubmit = async (data: InsertAd) => {
     const user = userAuth.getUser();
     
     if (!user) {
@@ -166,14 +167,31 @@ export default function CreateAd() {
       setLocation("/login");
       return;
     }
-    
-    const payload = {
-      ...data,
-      userId: user.id,
-      imageUrl: imagePreview || undefined,
-    };
-    
-    createAdMutation.mutate(payload);
+
+    try {
+      // Upload images first if any
+      let primaryImageUrl = undefined;
+      let uploadedUrls: string[] = [];
+      
+      if (images.length > 0) {
+        uploadedUrls = await uploadImages();
+        const primaryImage = images.find(img => img.isPrimary);
+        const primaryIndex = images.indexOf(primaryImage!);
+        primaryImageUrl = uploadedUrls[primaryIndex];
+      }
+      
+      const payload = {
+        ...data,
+        userId: user.id,
+        imageUrl: primaryImageUrl, // Keep for backwards compatibility
+        images: uploadedUrls, // Send all images to backend
+      };
+      
+      createAdMutation.mutate(payload);
+    } catch (error) {
+      // Error already shown in uploadImages
+      return;
+    }
   };
 
   const compressImage = (file: File): Promise<string> => {
@@ -213,58 +231,110 @@ export default function CreateAd() {
     });
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // Check file size (max 10MB for original)
+  const handleImagesUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    // Check total number of images (max 6)
+    if (images.length + files.length > 6) {
+      toast({
+        title: "Muitas imagens",
+        description: "Você pode adicionar no máximo 6 imagens por anúncio.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const newImages: { file: File; preview: string; isPrimary: boolean; uploaded?: string }[] = [];
+
+    for (const file of files) {
+      // Check file size (max 10MB)
       if (file.size > 10 * 1024 * 1024) {
         toast({
           title: "Imagem muito grande",
-          description: "A imagem deve ter no máximo 10MB. Tente usar uma imagem menor.",
+          description: `A imagem ${file.name} deve ter no máximo 10MB.`,
           variant: "destructive",
         });
-        return;
+        continue;
       }
 
-      try {
+      // Create preview
+      const preview = URL.createObjectURL(file);
+      newImages.push({
+        file,
+        preview,
+        isPrimary: images.length === 0 && newImages.length === 0, // First image is primary
+        uploaded: undefined
+      });
+    }
+
+    setImages(prev => [...prev, ...newImages]);
+  };
+
+  const uploadImages = async () => {
+    setUploading(true);
+    const uploadedImages: string[] = [];
+
+    try {
+      for (const image of images) {
+        if (image.uploaded) {
+          uploadedImages.push(image.uploaded);
+          continue;
+        }
+
         // Compress image
-        const compressedDataUrl = await compressImage(file);
+        const compressedDataUrl = await compressImage(image.file);
         const base64 = compressedDataUrl.split(',')[1];
         
         const response = await userAuth.apiCall('/api/upload/image', {
           method: 'POST',
           body: JSON.stringify({
             imageData: base64,
-            fileName: file.name
+            fileName: image.file.name
           })
         });
 
-        setImagePreview(response.imageUrl);
-        toast({
-          title: "📸 Imagem carregada!",
-          description: "Sua imagem foi otimizada e está pronta.",
-          duration: 2000,
-        });
-      } catch (error: any) {
-        console.error("Error uploading image:", error);
-        
-        if (error.message && error.message.includes('request entity too large')) {
-          toast({
-            title: "🖼️ Imagem muito grande",
-            description: "Por favor, use uma imagem menor (máx. 10MB).",
-            variant: "destructive",
-            duration: 4000,
-          });
-        } else {
-          toast({
-            title: "❌ Erro no upload",
-            description: "Não foi possível carregar a imagem. Tente novamente.",
-            variant: "destructive",
-            duration: 3000,
-          });
+        if (response.imageUrl) {
+          uploadedImages.push(response.imageUrl);
+          // Update the image state with uploaded URL
+          setImages(prev => prev.map(img => 
+            img === image ? { ...img, uploaded: response.imageUrl } : img
+          ));
         }
       }
+
+      return uploadedImages;
+    } catch (error: any) {
+      console.error("Error uploading images:", error);
+      toast({
+        title: "❌ Erro no upload",
+        description: "Não foi possível fazer upload de algumas imagens.",
+        variant: "destructive",
+      });
+      throw error;
+    } finally {
+      setUploading(false);
     }
+  };
+
+  const removeImage = (index: number) => {
+    setImages(prev => {
+      const newImages = prev.filter((_, i) => i !== index);
+      // If we removed the primary image, make the first image primary
+      if (prev[index].isPrimary && newImages.length > 0) {
+        newImages[0].isPrimary = true;
+      }
+      return newImages;
+    });
+  };
+
+  const setPrimaryImage = (index: number) => {
+    setImages(prev =>
+      prev.map((img, i) => ({
+        ...img,
+        isPrimary: i === index,
+      }))
+    );
   };
 
   return (
@@ -406,41 +476,76 @@ export default function CreateAd() {
             </div>
             
             <div>
-              <Label htmlFor="image" className="text-sm font-medium">
-                Foto do produto (opcional)
+              <Label className="text-sm font-medium">
+                Fotos do produto (opcional) - Máximo 6 fotos
               </Label>
-              <div className="mt-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-8 text-center hover:border-emerald-600 transition-colors cursor-pointer">
+              
+              {/* Upload Area */}
+              <div className="mt-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6 text-center hover:border-emerald-600 transition-colors cursor-pointer">
                 <input
-                  id="image"
+                  id="images"
                   type="file"
                   accept="image/*"
-                  onChange={handleImageUpload}
+                  multiple
+                  onChange={handleImagesUpload}
                   className="hidden"
-                  data-testid="input-image"
+                  data-testid="input-images"
                 />
-                <label htmlFor="image" className="cursor-pointer">
-                  {imagePreview ? (
-                    <div className="space-y-2">
-                      <img
-                        src={imagePreview}
-                        alt="Preview"
-                        className="mx-auto h-40 w-40 object-cover rounded-lg"
-                      />
-                      <p className="text-emerald-600 text-sm">Clique para alterar a foto</p>
-                    </div>
-                  ) : (
-                    <>
-                      <CloudUpload className="mx-auto h-16 w-16 text-gray-400 mb-4" />
-                      <p className="text-gray-500 dark:text-gray-400 mb-2">
-                        Clique para adicionar uma foto
-                      </p>
-                      <p className="text-sm text-gray-400">
-                        PNG, JPG até 10MB (otimização automática)
-                      </p>
-                    </>
-                  )}
+                <label htmlFor="images" className="cursor-pointer">
+                  <CloudUpload className="mx-auto h-12 w-12 text-gray-400 mb-3" />
+                  <p className="text-gray-500 dark:text-gray-400 mb-1">
+                    Clique para adicionar fotos
+                  </p>
+                  <p className="text-sm text-gray-400">
+                    PNG, JPG até 10MB cada ({images.length}/6)
+                  </p>
                 </label>
               </div>
+
+              {/* Image Grid */}
+              {images.length > 0 && (
+                <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-4">
+                  {images.map((image, index) => (
+                    <div key={index} className="relative group">
+                      <div className={`relative rounded-lg overflow-hidden border-2 transition-colors ${
+                        image.isPrimary ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20' : 'border-gray-200 dark:border-gray-600'
+                      }`}>
+                        <img
+                          src={image.preview}
+                          alt={`Preview ${index + 1}`}
+                          className="w-full h-24 object-cover"
+                        />
+                        {image.isPrimary && (
+                          <div className="absolute top-1 left-1 bg-emerald-500 text-white text-xs px-2 py-1 rounded-md font-medium">
+                            Principal
+                          </div>
+                        )}
+                        {image.uploaded && (
+                          <div className="absolute top-1 right-8 bg-green-500 text-white text-xs px-2 py-1 rounded-md">
+                            ✓
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => removeImage(index)}
+                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                        >
+                          ×
+                        </button>
+                      </div>
+                      {!image.isPrimary && (
+                        <button
+                          type="button"
+                          onClick={() => setPrimaryImage(index)}
+                          className="mt-1 text-xs text-emerald-600 hover:text-emerald-700 font-medium"
+                        >
+                          Definir como principal
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             
             <div className="flex space-x-4 pt-4">
@@ -455,15 +560,20 @@ export default function CreateAd() {
               </Button>
               <Button
                 type="submit"
-                disabled={createAdMutation.isPending}
+                disabled={createAdMutation.isPending || uploading}
                 className={`flex-1 transition-all duration-200 ${
-                  createAdMutation.isPending 
+                  createAdMutation.isPending || uploading
                     ? "bg-emerald-400 cursor-not-allowed" 
                     : "bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800"
                 } text-white shadow-md hover:shadow-lg active:shadow-sm`}
                 data-testid="button-create-ad"
               >
-                {createAdMutation.isPending ? (
+                {uploading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Enviando fotos...
+                  </>
+                ) : createAdMutation.isPending ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
                     Publicando...

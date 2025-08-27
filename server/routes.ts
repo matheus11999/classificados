@@ -270,8 +270,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/ads', requireAuth, async (req: any, res) => {
     try {
       const userId = req.user.id;
+      const { images, ...adData } = req.body;
+      
       const validatedData = insertAdWithUserSchema.parse({
-        ...req.body,
+        ...adData,
         userId
       });
       
@@ -280,13 +282,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const maxAdsPerUser = await storage.getSetting("max_ads_per_user");
       const maxAds = parseInt(maxAdsPerUser?.value || "10");
       
-      if (user && parseInt(user.activeAdsCount) >= maxAds) {
+      if (user && parseInt(user.activeAdsCount || "0") >= maxAds) {
         return res.status(403).json({ 
           message: `Limite de ${maxAds} anúncios ativos atingido` 
         });
       }
       
-      const ad = await storage.createAd(validatedData);
+      // Pass images array to createAd
+      const ad = await storage.createAd({
+        ...validatedData,
+        images: images || []
+      });
       
       // Create notification
       await storage.createNotification({
@@ -557,8 +563,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         payerName: validatedData.payerName,
         payerLastName: validatedData.payerLastName,
         payerCpf: validatedData.payerCpf,
-        payerEmail: validatedData.payerEmail,
-        payerPhone: validatedData.payerPhone,
+        payerEmail: validatedData.payerEmail || undefined,
+        payerPhone: validatedData.payerPhone || undefined,
         externalReference: boostedAd.id,
       });
 
