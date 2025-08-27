@@ -788,7 +788,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/admin/ads/:id', async (req: any, res) => {
+  app.delete('/api/admin/ads/:id', isAdminAuthenticated, async (req: any, res) => {
     try {
       const { id } = req.params;
       const deleted = await storage.deleteAdPermanently(id);

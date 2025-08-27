@@ -156,6 +156,11 @@ export default function CreateAd() {
   }
 
   const onSubmit = async (data: InsertAd) => {
+    // Prevent double submission
+    if (createAdMutation.isPending || uploading) {
+      return;
+    }
+
     const user = userAuth.getUser();
     
     if (!user) {

@@ -13,7 +13,8 @@
       "WebFetch(domain:89.28.236.67)",
       "Bash(find:*)",
       "Bash(node:*)",
-      "Bash(timeout 10 npm start)"
+      "Bash(timeout 10 npm start)",
+      "Bash(claude --version)"
     ],
     "deny": [],
     "ask": [],
