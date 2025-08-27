@@ -53,7 +53,7 @@ export const ads = pgTable("ads", {
   title: varchar("title", { length: 200 }).notNull(),
   description: text("description").notNull(),
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
-  imageUrl: varchar("image_url"),
+  imageUrl: varchar("image_url"), // Main image (backwards compatibility)
   categoryId: uuid("category_id").references(() => categories.id),
   location: varchar("location", { length: 200 }).notNull(),
   whatsapp: varchar("whatsapp", { length: 20 }).notNull(),
@@ -64,6 +64,15 @@ export const ads = pgTable("ads", {
   expiresAt: timestamp("expires_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const adImages = pgTable("ad_images", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  adId: uuid("ad_id").references(() => ads.id, { onDelete: 'cascade' }).notNull(),
+  imageUrl: varchar("image_url").notNull(),
+  isPrimary: boolean("is_primary").default(false),
+  order: integer("order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const favorites = pgTable("favorites", {
@@ -165,6 +174,14 @@ export const adsRelations = relations(ads, ({ one, many }) => ({
     references: [categories.id],
   }),
   favorites: many(favorites),
+  images: many(adImages),
+}));
+
+export const adImagesRelations = relations(adImages, ({ one }) => ({
+  ad: one(ads, {
+    fields: [adImages.adId],
+    references: [ads.id],
+  }),
 }));
 
 export const favoritesRelations = relations(favorites, ({ one }) => ({
@@ -300,6 +317,9 @@ export type InsertCategory = z.infer<typeof insertCategorySchema>;
 export type Ad = typeof ads.$inferSelect;
 export type InsertAd = z.infer<typeof insertAdSchema>;
 
+export type AdImage = typeof adImages.$inferSelect;
+export type InsertAdImage = typeof adImages.$inferInsert;
+
 export type Favorite = typeof favorites.$inferSelect;
 export type InsertFavorite = z.infer<typeof insertFavoriteSchema>;
 
@@ -322,6 +342,7 @@ export type InsertBoostedAd = z.infer<typeof insertBoostedAdSchema>;
 export type AdWithDetails = Ad & {
   user: User;
   category: Category | null;
+  images?: AdImage[];
   isFavorited?: boolean;
   favoritesCount?: number;
   isPromoted?: boolean;

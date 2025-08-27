@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -12,15 +12,29 @@ interface SearchSectionProps {
 
 export default function SearchSection({ onSearch, onFilterChange }: SearchSectionProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<string>("");
 
   const { data: categories = [] } = useQuery<Category[]>({
     queryKey: ["/api/categories"],
   });
 
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Call onSearch when debounced query changes
+  useEffect(() => {
+    onSearch(debouncedQuery);
+  }, [debouncedQuery, onSearch]);
+
   const handleSearch = (query: string) => {
     setSearchQuery(query);
-    onSearch(query);
   };
 
   const handleFilterClick = (categoryId: string) => {
@@ -35,7 +49,7 @@ export default function SearchSection({ onSearch, onFilterChange }: SearchSectio
   };
 
   return (
-    <section className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 transition-colors duration-300">
+    <section className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-md border-b border-gray-200/50 dark:border-slate-700/50 transition-all duration-300 shadow-lg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="space-y-4">
           {/* Search Bar */}
@@ -48,7 +62,7 @@ export default function SearchSection({ onSearch, onFilterChange }: SearchSectio
               placeholder="Buscar produtos, serviços..."
               value={searchQuery}
               onChange={(e) => handleSearch(e.target.value)}
-              className="pl-10 pr-4 py-3 border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-emerald-600 focus:border-transparent"
+              className="pl-10 pr-4 py-4 border-gray-200 dark:border-slate-600 rounded-2xl bg-white/80 dark:bg-slate-700/80 text-gray-900 dark:text-slate-100 placeholder-gray-500 dark:placeholder-slate-400 focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-md backdrop-blur-sm transition-all duration-200"
               data-testid="input-search"
             />
           </div>
@@ -60,10 +74,10 @@ export default function SearchSection({ onSearch, onFilterChange }: SearchSectio
                 key={category.id}
                 variant={activeFilter === category.id ? "default" : "secondary"}
                 onClick={() => handleFilterClick(category.id)}
-                className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                className={`flex-shrink-0 px-5 py-3 rounded-2xl text-sm font-medium transition-all duration-200 shadow-md ${
                   activeFilter === category.id
-                    ? "bg-emerald-600 text-white hover:bg-emerald-700"
-                    : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                    ? "bg-gradient-to-r from-emerald-500 to-emerald-600 text-white hover:from-emerald-600 hover:to-emerald-700 shadow-emerald-500/25"
+                    : "bg-white/80 dark:bg-slate-700/80 text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-600 backdrop-blur-sm"
                 }`}
                 data-testid={`filter-${category.id}`}
               >
