@@ -32,7 +32,7 @@ import {
   type BoostedAdWithDetails,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, sql, ilike, or } from "drizzle-orm";
+import { eq, desc, and, sql, ilike, or, inArray } from "drizzle-orm";
 
 // Interface for storage operations
 export interface IStorage {
@@ -226,6 +226,8 @@ export class DatabaseStorage implements IStorage {
       conditions.push(eq(ads.userId, userId));
     }
 
+    console.log(`Getting ads with ${conditions.length} conditions, limit: ${limit}, offset: ${offset}`);
+
     const result = await db
       .select({
         id: ads.id,
@@ -243,6 +245,7 @@ export class DatabaseStorage implements IStorage {
         updatedAt: ads.updatedAt,
         user: {
           id: users.id,
+          username: users.username,
           email: users.email,
           firstName: users.firstName,
           lastName: users.lastName,
@@ -266,23 +269,44 @@ export class DatabaseStorage implements IStorage {
       .limit(limit)
       .offset(offset);
 
-    // Get images for each ad
-    const adsWithImages = await Promise.all(
-      result.map(async (ad) => {
-        const adImages = await db
-          .select()
-          .from(adImages)
-          .where(eq(adImages.adId, ad.id))
-          .orderBy(desc(adImages.isPrimary), adImages.order);
-        
-        return {
-          ...ad,
-          images: adImages
-        };
-      })
-    );
+    console.log(`Found ${result.length} ads`);
 
-    return adsWithImages as AdWithDetails[];
+    // Optimize: Get all images in a single query if there are ads
+    if (result.length === 0) {
+      console.log("No ads found, returning empty array");
+      return result as AdWithDetails[];
+    }
+
+    try {
+      const adIds = result.map(ad => ad.id);
+      const allImages = await db
+        .select()
+        .from(adImages)
+        .where(inArray(adImages.adId, adIds))
+        .orderBy(desc(adImages.isPrimary), adImages.order);
+
+      // Group images by adId
+      const imagesByAdId = allImages.reduce((acc, image) => {
+        if (!acc[image.adId]) acc[image.adId] = [];
+        acc[image.adId].push(image);
+        return acc;
+      }, {} as Record<string, typeof allImages>);
+
+      // Attach images to ads
+      const adsWithImages = result.map(ad => ({
+        ...ad,
+        images: imagesByAdId[ad.id] || []
+      }));
+
+      return adsWithImages as AdWithDetails[];
+    } catch (error) {
+      console.error("Error fetching ad images:", error);
+      // Fallback: return ads without images array if there's an error
+      return result.map(ad => ({
+        ...ad,
+        images: []
+      })) as AdWithDetails[];
+    }
   }
 
   async getAdById(id: string): Promise<AdWithDetails | undefined> {
@@ -303,6 +327,7 @@ export class DatabaseStorage implements IStorage {
         updatedAt: ads.updatedAt,
         user: {
           id: users.id,
+          username: users.username,
           email: users.email,
           firstName: users.firstName,
           lastName: users.lastName,
@@ -513,6 +538,7 @@ export class DatabaseStorage implements IStorage {
         updatedAt: ads.updatedAt,
         user: {
           id: users.id,
+          username: users.username,
           email: users.email,
           firstName: users.firstName,
           lastName: users.lastName,
@@ -605,6 +631,7 @@ export class DatabaseStorage implements IStorage {
         updatedAt: ads.updatedAt,
         user: {
           id: users.id,
+          username: users.username,
           email: users.email,
           firstName: users.firstName,
           lastName: users.lastName,
