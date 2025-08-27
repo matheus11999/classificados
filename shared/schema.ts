@@ -1,6 +1,7 @@
 import { sql, relations } from 'drizzle-orm';
 import {
   index,
+  integer,
   jsonb,
   pgTable,
   timestamp,
