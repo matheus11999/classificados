@@ -94,12 +94,32 @@ export default function Home() {
 
                 {/* Featured Product Highlight - Show the top boosted ad */}
                 {boostedAds[0] && (
-                  <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 mt-6">
+                  <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 mt-6 cursor-pointer hover:bg-white/15 transition-colors"
+                       onClick={() => handleAdClick(boostedAds[0])}>
                     <div className="flex items-start gap-4">
-                      <div className="w-20 h-20 bg-white/20 rounded-xl flex items-center justify-center">
-                        <span className="text-2xl">📦</span>
+                      <div className="w-20 h-20 bg-white/20 rounded-xl overflow-hidden">
+                        {boostedAds[0].imageUrl ? (
+                          <img src={boostedAds[0].imageUrl} alt={boostedAds[0].title} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <span className="text-2xl">📦</span>
+                          </div>
+                        )}
                       </div>
                       <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <div className="w-6 h-6 bg-white/30 rounded-full flex items-center justify-center">
+                            <span className="text-white text-xs font-medium">
+                              {boostedAds[0].user?.firstName ? boostedAds[0].user.firstName.charAt(0) : boostedAds[0].username?.charAt(0) || '?'}
+                            </span>
+                          </div>
+                          <span className="text-sm opacity-80">
+                            {boostedAds[0].user?.firstName && boostedAds[0].user?.lastName 
+                              ? `${boostedAds[0].user.firstName} ${boostedAds[0].user.lastName}`
+                              : boostedAds[0].username || 'Anônimo'
+                            }
+                          </span>
+                        </div>
                         <h3 className="text-xl font-semibold mb-1">{boostedAds[0].title}</h3>
                         <p className="text-2xl font-bold text-yellow-300 mb-2">
                           R$ {parseFloat(boostedAds[0].price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
@@ -109,6 +129,10 @@ export default function Home() {
                       <Button 
                         className="bg-white/20 hover:bg-white/30 text-white border-white/30"
                         size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAdClick(boostedAds[0]);
+                        }}
                       >
                         Ver Detalhes
                       </Button>

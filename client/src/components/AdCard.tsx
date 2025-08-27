@@ -119,37 +119,55 @@ export default function AdCard({ ad, variant = "featured", onAdClick }: AdCardPr
               </Badge>
             )}
           </div>
-          <p className="text-emerald-600 font-bold text-lg mb-2" data-testid={`text-price-${ad.id}`}>
+          <p className="text-emerald-600 font-bold text-lg mb-1" data-testid={`text-price-${ad.id}`}>
             R$ {parseFloat(ad.price).toLocaleString("pt-BR", {
               minimumFractionDigits: 0,
               maximumFractionDigits: 0,
             })}
           </p>
+          
+          {/* User Info */}
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-5 h-5 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
+              <span className="text-white text-xs font-medium">
+                {ad.user?.firstName ? ad.user.firstName.charAt(0) : ad.username?.charAt(0) || '?'}
+              </span>
+            </div>
+            <span className="text-gray-600 dark:text-gray-400 text-xs truncate">
+              {ad.user?.firstName && ad.user?.lastName 
+                ? `${ad.user.firstName} ${ad.user.lastName}`
+                : ad.username || 'Anônimo'
+              }
+            </span>
+          </div>
+          
           <p className="text-gray-500 dark:text-gray-400 text-xs mb-3" data-testid={`text-location-${ad.id}`}>
             {ad.location}
           </p>
           
           <div className="space-y-1">
-            <Button
-              onClick={handleWhatsAppClick}
-              className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white font-medium py-2 px-3 rounded-lg transition-all duration-200 flex items-center justify-center space-x-1 text-sm"
-              data-testid={`button-whatsapp-${ad.id}`}
-            >
-              <i className="fab fa-whatsapp"></i>
-              <span>Contato</span>
-            </Button>
-            
-            <BoostButton 
-              ad={{ 
-                id: ad.id, 
-                title: ad.title, 
-                price: ad.price,
-                userId: ad.userId || undefined
-              }}
-              variant="outline"
-              size="sm"
-              className="w-full"
-            />
+            <div className="flex gap-2">
+              <Button
+                onClick={handleWhatsAppClick}
+                className="flex-1 bg-[#25D366] hover:bg-[#128C7E] text-white font-medium py-2 px-3 rounded-lg transition-all duration-200 flex items-center justify-center space-x-1 text-sm"
+                data-testid={`button-whatsapp-${ad.id}`}
+              >
+                <i className="fab fa-whatsapp"></i>
+                <span>Chat</span>
+              </Button>
+              
+              <BoostButton 
+                ad={{ 
+                  id: ad.id, 
+                  title: ad.title, 
+                  price: ad.price,
+                  userId: ad.userId || undefined
+                }}
+                variant="outline"
+                size="sm"
+                className="px-3"
+              />
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -191,12 +209,27 @@ export default function AdCard({ ad, variant = "featured", onAdClick }: AdCardPr
                 </Badge>
               )}
             </div>
-            <p className="text-2xl font-bold text-emerald-600" data-testid={`text-price-${ad.id}`}>
+            <p className="text-2xl font-bold text-emerald-600 mb-2" data-testid={`text-price-${ad.id}`}>
               R$ {parseFloat(ad.price).toLocaleString("pt-BR", {
                 minimumFractionDigits: 0,
                 maximumFractionDigits: 0,
               })}
             </p>
+            
+            {/* User Info */}
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-7 h-7 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
+                <span className="text-white text-sm font-medium">
+                  {ad.user?.firstName ? ad.user.firstName.charAt(0) : ad.username?.charAt(0) || '?'}
+                </span>
+              </div>
+              <span className="text-gray-600 dark:text-gray-400 text-sm">
+                {ad.user?.firstName && ad.user?.lastName 
+                  ? `${ad.user.firstName} ${ad.user.lastName}`
+                  : ad.username || 'Anônimo'
+                }
+              </span>
+            </div>
           </div>
           <Button
             variant="ghost"
@@ -225,14 +258,14 @@ export default function AdCard({ ad, variant = "featured", onAdClick }: AdCardPr
           <span data-testid={`text-time-${ad.id}`}>{timeAgo}</span>
         </div>
         
-        <div className="flex gap-2">
+        <div className="flex gap-3">
           <Button
             onClick={handleWhatsAppClick}
             className="flex-1 bg-[#25D366] hover:bg-[#128C7E] text-white font-medium py-3 px-4 rounded-xl transition-all duration-200 flex items-center justify-center space-x-2 hover:shadow-lg"
             data-testid={`button-whatsapp-${ad.id}`}
           >
             <i className="fab fa-whatsapp text-lg"></i>
-            <span>Contato</span>
+            <span>Chat</span>
           </Button>
           
           <BoostButton 
@@ -244,7 +277,7 @@ export default function AdCard({ ad, variant = "featured", onAdClick }: AdCardPr
             }}
             variant="outline"
             size="default"
-            className="px-4 py-3"
+            className="px-4 py-3 flex-shrink-0"
           />
         </div>
       </CardContent>

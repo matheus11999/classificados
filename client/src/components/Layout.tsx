@@ -70,13 +70,15 @@ export default function Layout({ children }: LayoutProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-emerald-600 to-emerald-400 rounded-xl flex items-center justify-center">
-                <i className="fas fa-tag text-white text-lg"></i>
+            <div className="flex items-center space-x-3 cursor-pointer" onClick={() => setLocation("/")}>
+              <div className="w-12 h-12 bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-500 rounded-2xl flex items-center justify-center shadow-lg">
+                <i className="fas fa-store text-white text-xl"></i>
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white">Classificados</h1>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Regionais</p>
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
+                  MarketPlace
+                </h1>
+                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Classificados Regionais</p>
               </div>
             </div>
             

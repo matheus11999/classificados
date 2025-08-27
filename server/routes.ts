@@ -369,19 +369,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Anúncio não encontrado ou sem permissão" });
       }
       
-      // Create notification
-      await storage.createNotification({
-        userId,
-        title: "Anúncio pausado",
-        message: "Seu anúncio foi pausado com sucesso",
-        type: "info",
-        adId: id
-      });
-      
-      res.json({ message: "Anúncio pausado com sucesso" });
+      res.json({ message: "Anúncio excluído com sucesso" });
     } catch (error) {
       console.error("Error deleting ad:", error);
-      res.status(500).json({ message: "Erro ao pausar anúncio" });
+      res.status(500).json({ message: "Erro ao excluir anúncio" });
     }
   });
 

@@ -406,8 +406,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteAd(id: string, userId: string): Promise<boolean> {
     const [deletedAd] = await db
-      .update(ads)
-      .set({ active: false, updatedAt: new Date() })
+      .delete(ads)
       .where(and(eq(ads.id, id), eq(ads.userId, userId)))
       .returning();
     
