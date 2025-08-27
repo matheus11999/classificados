@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Layout from "@/components/Layout";
 import Home from "@/pages/Home";
 import CreateAd from "@/pages/CreateAd";
+import EditAd from "@/pages/EditAd";
 import Profile from "@/pages/Profile";
 import Login from "@/pages/Login";
 import AdminLogin from "@/pages/AdminLogin";
@@ -23,6 +24,11 @@ function Router() {
       <Route path="/create">
         <Layout>
           <CreateAd />
+        </Layout>
+      </Route>
+      <Route path="/edit/:id">
+        <Layout>
+          <EditAd />
         </Layout>
       </Route>
       <Route path="/profile">

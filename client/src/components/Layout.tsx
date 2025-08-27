@@ -43,7 +43,10 @@ export default function Layout({ children }: LayoutProps) {
     loadNotifications();
 
     // Re-check periodically
-    const interval = setInterval(checkAuth, 5000);
+    const interval = setInterval(() => {
+      checkAuth();
+      loadNotifications();
+    }, 5000);
     return () => clearInterval(interval);
   }, []);
 

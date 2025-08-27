@@ -112,13 +112,13 @@ export default function UserDashboard() {
       setAds(ads.filter(ad => ad.id !== adId));
       
       toast({
-        title: "Anúncio pausado",
-        description: "Seu anúncio foi pausado com sucesso",
+        title: "Anúncio excluído",
+        description: "Seu anúncio foi excluído com sucesso",
       });
     } catch (error: any) {
       toast({
         title: "Erro",
-        description: error.message || "Erro ao pausar anúncio",
+        description: error.message || "Erro ao excluir anúncio",
         variant: "destructive",
       });
     }
@@ -450,9 +450,9 @@ export default function UserDashboard() {
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                           <AlertDialogHeader>
-                            <AlertDialogTitle>Pausar anúncio</AlertDialogTitle>
+                            <AlertDialogTitle>Excluir anúncio</AlertDialogTitle>
                             <AlertDialogDescription>
-                              Tem certeza que deseja pausar "{ad.title}"? Você pode reativá-lo depois.
+                              Tem certeza que deseja excluir "{ad.title}"? Esta ação não pode ser desfeita.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
@@ -461,7 +461,7 @@ export default function UserDashboard() {
                               onClick={() => handleDeleteAd(ad.id)}
                               className="bg-red-600 hover:bg-red-700"
                             >
-                              Pausar
+                              Excluir
                             </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>

@@ -144,7 +144,7 @@ export default function CreateAdModal({ open, onOpenChange }: CreateAdModalProps
               Categoria
             </Label>
             <Select
-              value={form.watch("categoryId")}
+              value={form.watch("categoryId") || ""}
               onValueChange={(value) => form.setValue("categoryId", value)}
             >
               <SelectTrigger className="mt-2" data-testid="select-category">

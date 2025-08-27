@@ -233,6 +233,18 @@ export const insertAdSchema = createInsertSchema(ads).omit({
   price: z.string().min(1, "Preço é obrigatório"),
 });
 
+export const insertAdWithUserSchema = createInsertSchema(ads).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  featured: true,
+  active: true,
+  views: true,
+  expiresAt: true,
+}).extend({
+  price: z.string().min(1, "Preço é obrigatório"),
+});
+
 export const insertFavoriteSchema = createInsertSchema(favorites).omit({
   id: true,
   userId: true,

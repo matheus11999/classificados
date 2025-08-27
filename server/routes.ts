@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./auth";
 import { createDefaultAdmin, authenticateAdmin, generateAdminToken, isAdminAuthenticated } from "./admin-auth";
 import { authenticateUser, registerUser, generateUserToken, requireAuth } from "./user-auth";
-import { insertAdSchema, insertFavoriteSchema, loginUserSchema, registerUserSchema, insertBoostedAdSchema, insertBoostPromotionSchema } from "@shared/schema";
+import { insertAdSchema, insertAdWithUserSchema, insertFavoriteSchema, loginUserSchema, registerUserSchema, insertBoostedAdSchema, insertBoostPromotionSchema } from "@shared/schema";
 import { mercadoPagoService } from "./mercadopago";
 import { z } from "zod";
 
@@ -270,7 +270,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/ads', requireAuth, async (req: any, res) => {
     try {
       const userId = req.user.id;
-      const validatedData = insertAdSchema.parse({
+      const validatedData = insertAdWithUserSchema.parse({
         ...req.body,
         userId
       });
@@ -355,34 +355,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating ad:", error);
       res.status(500).json({ message: "Erro ao atualizar anúncio" });
-    }
-  });
-
-  app.delete('/api/ads/:id', requireAuth, async (req: any, res) => {
-    try {
-      const { id } = req.params;
-      const userId = req.user.id;
-      
-      // Instead of deleting, we'll just deactivate the ad
-      const ad = await storage.updateAd(id, { active: false }, userId);
-      
-      if (!ad) {
-        return res.status(404).json({ message: "Anúncio não encontrado ou sem permissão" });
-      }
-      
-      // Create notification
-      await storage.createNotification({
-        userId,
-        title: "Anúncio pausado",
-        message: `Seu anúncio "${ad.title}" foi pausado com sucesso`,
-        type: "info",
-        adId: ad.id
-      });
-      
-      res.json({ message: "Anúncio pausado com sucesso" });
-    } catch (error) {
-      console.error("Error deleting ad:", error);
-      res.status(500).json({ message: "Erro ao pausar anúncio" });
     }
   });
 
