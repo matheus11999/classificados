@@ -405,6 +405,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteAd(id: string, userId: string): Promise<boolean> {
+    // First delete related notifications
+    await db
+      .delete(notifications)
+      .where(eq(notifications.adId, id));
+    
+    // Then delete the ad
     const [deletedAd] = await db
       .delete(ads)
       .where(and(eq(ads.id, id), eq(ads.userId, userId)))
@@ -585,10 +591,33 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteAdPermanently(adId: string): Promise<boolean> {
+    // First delete related notifications
+    await db
+      .delete(notifications)
+      .where(eq(notifications.adId, adId));
+    
+    // Delete from favorites if any
+    await db
+      .delete(favorites)
+      .where(eq(favorites.adId, adId));
+    
+    // Then delete the ad
     const [ad] = await db
       .delete(ads)
       .where(eq(ads.id, adId))
       .returning();
+    
+    // Update user's active ads count if the ad had a user
+    if (ad && ad.userId) {
+      await db
+        .update(users)
+        .set({ 
+          activeAdsCount: sql`${users.activeAdsCount} - 1`,
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, ad.userId));
+    }
+    
     return !!ad;
   }
 

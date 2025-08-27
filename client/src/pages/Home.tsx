@@ -110,13 +110,13 @@ export default function Home() {
                         <div className="flex items-center gap-2 mb-1">
                           <div className="w-6 h-6 bg-white/30 rounded-full flex items-center justify-center">
                             <span className="text-white text-xs font-medium">
-                              {boostedAds[0].user?.firstName ? boostedAds[0].user.firstName.charAt(0) : boostedAds[0].username?.charAt(0) || '?'}
+                              {boostedAds[0].user?.firstName ? boostedAds[0].user.firstName.charAt(0) : boostedAds[0].user?.username?.charAt(0) || '?'}
                             </span>
                           </div>
                           <span className="text-sm opacity-80">
                             {boostedAds[0].user?.firstName && boostedAds[0].user?.lastName 
                               ? `${boostedAds[0].user.firstName} ${boostedAds[0].user.lastName}`
-                              : boostedAds[0].username || 'Anônimo'
+                              : boostedAds[0].user?.username || 'Anônimo'
                             }
                           </span>
                         </div>

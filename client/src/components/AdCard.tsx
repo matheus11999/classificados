@@ -130,13 +130,13 @@ export default function AdCard({ ad, variant = "featured", onAdClick }: AdCardPr
           <div className="flex items-center gap-2 mb-2">
             <div className="w-5 h-5 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
               <span className="text-white text-xs font-medium">
-                {ad.user?.firstName ? ad.user.firstName.charAt(0) : ad.username?.charAt(0) || '?'}
+                {ad.user?.firstName ? ad.user.firstName.charAt(0) : ad.user?.username?.charAt(0) || '?'}
               </span>
             </div>
             <span className="text-gray-600 dark:text-gray-400 text-xs truncate">
               {ad.user?.firstName && ad.user?.lastName 
                 ? `${ad.user.firstName} ${ad.user.lastName}`
-                : ad.username || 'Anônimo'
+                : ad.user?.username || 'Anônimo'
               }
             </span>
           </div>
@@ -220,13 +220,13 @@ export default function AdCard({ ad, variant = "featured", onAdClick }: AdCardPr
             <div className="flex items-center gap-2 mb-2">
               <div className="w-7 h-7 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
                 <span className="text-white text-sm font-medium">
-                  {ad.user?.firstName ? ad.user.firstName.charAt(0) : ad.username?.charAt(0) || '?'}
+                  {ad.user?.firstName ? ad.user.firstName.charAt(0) : ad.user?.username?.charAt(0) || '?'}
                 </span>
               </div>
               <span className="text-gray-600 dark:text-gray-400 text-sm">
                 {ad.user?.firstName && ad.user?.lastName 
                   ? `${ad.user.firstName} ${ad.user.lastName}`
-                  : ad.username || 'Anônimo'
+                  : ad.user?.username || 'Anônimo'
                 }
               </span>
             </div>
