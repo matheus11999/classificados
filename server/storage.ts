@@ -271,42 +271,12 @@ export class DatabaseStorage implements IStorage {
 
     console.log(`Found ${result.length} ads`);
 
-    // Optimize: Get all images in a single query if there are ads
-    if (result.length === 0) {
-      console.log("No ads found, returning empty array");
-      return result as AdWithDetails[];
-    }
-
-    try {
-      const adIds = result.map(ad => ad.id);
-      const allImages = await db
-        .select()
-        .from(adImages)
-        .where(inArray(adImages.adId, adIds))
-        .orderBy(desc(adImages.isPrimary), adImages.order);
-
-      // Group images by adId
-      const imagesByAdId = allImages.reduce((acc, image) => {
-        if (!acc[image.adId]) acc[image.adId] = [];
-        acc[image.adId].push(image);
-        return acc;
-      }, {} as Record<string, typeof allImages>);
-
-      // Attach images to ads
-      const adsWithImages = result.map(ad => ({
-        ...ad,
-        images: imagesByAdId[ad.id] || []
-      }));
-
-      return adsWithImages as AdWithDetails[];
-    } catch (error) {
-      console.error("Error fetching ad images:", error);
-      // Fallback: return ads without images array if there's an error
-      return result.map(ad => ({
-        ...ad,
-        images: []
-      })) as AdWithDetails[];
-    }
+    // TEMPORARY FIX: Skip images query to debug main issue
+    console.log("Returning ads without images query for debugging");
+    return result.map(ad => ({
+      ...ad,
+      images: []
+    })) as AdWithDetails[];
   }
 
   async getAdById(id: string): Promise<AdWithDetails | undefined> {
