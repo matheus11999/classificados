@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Calendar, Eye, Star } from "lucide-react";
+import { MapPin, Calendar, Eye, Star, ChevronLeft, ChevronRight } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { AdWithDetails } from "@shared/schema";
@@ -15,6 +15,8 @@ interface ProductDetailsModalProps {
 }
 
 export default function ProductDetailsModal({ ad, open, onOpenChange }: ProductDetailsModalProps) {
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
   if (!ad) return null;
 
   // Fetch detailed ad data when modal opens to count views
@@ -25,6 +27,32 @@ export default function ProductDetailsModal({ ad, open, onOpenChange }: ProductD
 
   // Use detailed ad data if available, otherwise fall back to the passed ad
   const currentAd = detailedAd || ad;
+
+  // Get all images (from images array first, then fallback to imageUrl)
+  const allImages = currentAd.images && currentAd.images.length > 0 
+    ? currentAd.images.map(img => img.imageUrl)
+    : currentAd.imageUrl 
+    ? [currentAd.imageUrl]
+    : [];
+
+  // Reset image index when modal opens or ad changes
+  useEffect(() => {
+    if (open) {
+      setCurrentImageIndex(0);
+    }
+  }, [open, currentAd.id]);
+
+  const nextImage = () => {
+    if (allImages.length > 1) {
+      setCurrentImageIndex((prev) => (prev + 1) % allImages.length);
+    }
+  };
+
+  const prevImage = () => {
+    if (allImages.length > 1) {
+      setCurrentImageIndex((prev) => (prev - 1 + allImages.length) % allImages.length);
+    }
+  };
 
   const handleWhatsAppClick = () => {
     const phoneNumber = currentAd.whatsapp.replace(/\D/g, "");
@@ -63,14 +91,64 @@ export default function ProductDetailsModal({ ad, open, onOpenChange }: ProductD
           </div>
         ) : (
           <div className="space-y-6">
-            {/* Image */}
-            {currentAd.imageUrl && (
-              <div className="aspect-video w-full rounded-xl overflow-hidden">
+            {/* Image Slider */}
+            {allImages.length > 0 && (
+              <div className="relative aspect-video w-full rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800">
                 <img
-                  src={currentAd.imageUrl}
-                  alt={currentAd.title}
+                  src={allImages[currentImageIndex]}
+                  alt={`${currentAd.title} - Imagem ${currentImageIndex + 1}`}
                   className="w-full h-full object-cover"
                 />
+                
+                {/* Navigation buttons for multiple images */}
+                {allImages.length > 1 && (
+                  <>
+                    <button
+                      onClick={prevImage}
+                      className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full w-10 h-10 flex items-center justify-center transition-colors"
+                      aria-label="Imagem anterior"
+                    >
+                      <ChevronLeft className="h-5 w-5" />
+                    </button>
+                    <button
+                      onClick={nextImage}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full w-10 h-10 flex items-center justify-center transition-colors"
+                      aria-label="Próxima imagem"
+                    >
+                      <ChevronRight className="h-5 w-5" />
+                    </button>
+                  </>
+                )}
+                
+                {/* Image counter */}
+                {allImages.length > 1 && (
+                  <div className="absolute bottom-4 right-4 bg-black/70 text-white px-3 py-1 rounded-full text-sm">
+                    {currentImageIndex + 1} / {allImages.length}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Thumbnail strip for multiple images */}
+            {allImages.length > 1 && (
+              <div className="flex gap-2 overflow-x-auto pb-2">
+                {allImages.map((imageUrl, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setCurrentImageIndex(index)}
+                    className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-colors ${
+                      index === currentImageIndex
+                        ? 'border-emerald-500'
+                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                    }`}
+                  >
+                    <img
+                      src={imageUrl}
+                      alt={`Miniatura ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </button>
+                ))}
               </div>
             )}
 

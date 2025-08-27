@@ -349,7 +349,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const userId = req.user.id;
-      const updateData = req.body;
+      const { images, ...adData } = req.body;
+      
+      // Validate the basic ad data
+      const updateData = {
+        ...adData,
+        ...(images && { images })
+      };
       
       const ad = await storage.updateAd(id, updateData, userId);
       

@@ -62,7 +62,7 @@ export interface IStorage {
   }): Promise<AdWithDetails[]>;
   getAdById(id: string): Promise<AdWithDetails | undefined>;
   createAd(ad: InsertAd & { images?: string[] }): Promise<Ad>;
-  updateAd(id: string, ad: Partial<InsertAd>, userId: string): Promise<Ad | undefined>;
+  updateAd(id: string, ad: Partial<InsertAd> & { images?: string[] }, userId: string): Promise<Ad | undefined>;
   deleteAd(id: string, userId: string): Promise<boolean>;
   incrementAdViews(id: string): Promise<void>;
   getUserAds(userId: string): Promise<AdWithDetails[]>;
@@ -266,7 +266,23 @@ export class DatabaseStorage implements IStorage {
       .limit(limit)
       .offset(offset);
 
-    return result as AdWithDetails[];
+    // Get images for each ad
+    const adsWithImages = await Promise.all(
+      result.map(async (ad) => {
+        const adImages = await db
+          .select()
+          .from(adImages)
+          .where(eq(adImages.adId, ad.id))
+          .orderBy(desc(adImages.isPrimary), adImages.order);
+        
+        return {
+          ...ad,
+          images: adImages
+        };
+      })
+    );
+
+    return adsWithImages as AdWithDetails[];
   }
 
   async getAdById(id: string): Promise<AdWithDetails | undefined> {
@@ -307,7 +323,19 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(categories, eq(ads.categoryId, categories.id))
       .where(and(eq(ads.id, id), eq(ads.active, true)));
 
-    return result as AdWithDetails | undefined;
+    if (!result) return undefined;
+
+    // Get images for this ad
+    const adImagesList = await db
+      .select()
+      .from(adImages)
+      .where(eq(adImages.adId, result.id))
+      .orderBy(desc(adImages.isPrimary), adImages.order);
+
+    return {
+      ...result,
+      images: adImagesList
+    } as AdWithDetails;
   }
 
   async createAd(ad: InsertAd & { images?: string[] }): Promise<Ad> {
@@ -406,15 +434,37 @@ export class DatabaseStorage implements IStorage {
       .where(eq(ads.id, id));
   }
 
-  async updateAd(id: string, ad: Partial<InsertAd>, userId: string): Promise<Ad | undefined> {
+  async updateAd(id: string, ad: Partial<InsertAd> & { images?: string[] }, userId: string): Promise<Ad | undefined> {
+    // Separate images from ad data
+    const { images, ...adData } = ad;
+    
     const [updatedAd] = await db
       .update(ads)
       .set({
-        ...ad,
+        ...adData,
         updatedAt: new Date(),
       })
       .where(and(eq(ads.id, id), eq(ads.userId, userId)))
       .returning();
+
+    // If images array is provided, update the images
+    if (images && updatedAd) {
+      // Delete existing images
+      await db.delete(adImages).where(eq(adImages.adId, updatedAd.id));
+      
+      // Insert new images
+      if (images.length > 0) {
+        const imageRecords = images.map((imageUrl, index) => ({
+          adId: updatedAd.id,
+          imageUrl,
+          isPrimary: index === 0, // First image is primary
+          order: index,
+        }));
+        
+        await db.insert(adImages).values(imageRecords);
+      }
+    }
+    
     return updatedAd;
   }
 

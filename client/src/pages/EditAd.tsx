@@ -19,7 +19,8 @@ import { userAuth } from "@/lib/user-auth";
 export default function EditAd() {
   const [, setLocation] = useLocation();
   const [match, params] = useRoute("/edit/:id");
-  const [imagePreview, setImagePreview] = useState<string>("");
+  const [images, setImages] = useState<{ file?: File; preview: string; isPrimary: boolean; uploaded?: string; isExisting?: boolean }[]>([]);
+  const [uploading, setUploading] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -73,15 +74,179 @@ export default function EditAd() {
         location: ad.location,
         whatsapp: ad.whatsapp,
       });
-      if (ad.imageUrl) {
-        setImagePreview(ad.imageUrl);
+
+      // Load existing images
+      const existingImages: { file?: File; preview: string; isPrimary: boolean; uploaded?: string; isExisting?: boolean }[] = [];
+      
+      if (ad.images && ad.images.length > 0) {
+        ad.images.forEach((img, index) => {
+          existingImages.push({
+            preview: img.imageUrl,
+            isPrimary: img.isPrimary || false,
+            uploaded: img.imageUrl,
+            isExisting: true
+          });
+        });
+      } else if (ad.imageUrl) {
+        // Fallback for legacy single image
+        existingImages.push({
+          preview: ad.imageUrl,
+          isPrimary: true,
+          uploaded: ad.imageUrl,
+          isExisting: true
+        });
       }
+      
+      setImages(existingImages);
     }
   }, [ad, form]);
 
   // Check if user owns this ad
   const user = userAuth.getUser();
   const isOwner = user && ad && ad.userId === user.id;
+
+  const compressImage = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      
+      img.onload = () => {
+        // Calculate new dimensions (max 1200px width/height)
+        const maxSize = 1200;
+        let { width, height } = img;
+        
+        if (width > height) {
+          if (width > maxSize) {
+            height = (height * maxSize) / width;
+            width = maxSize;
+          }
+        } else {
+          if (height > maxSize) {
+            width = (width * maxSize) / height;
+            height = maxSize;
+          }
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        // Draw and compress
+        ctx?.drawImage(img, 0, 0, width, height);
+        const compressed = canvas.toDataURL('image/jpeg', 0.8);
+        resolve(compressed);
+      };
+      
+      img.onerror = reject;
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
+  const handleImagesUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    // Check total number of images (max 6)
+    if (images.length + files.length > 6) {
+      toast({
+        title: "Muitas imagens",
+        description: "Você pode adicionar no máximo 6 imagens por anúncio.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const newImages: { file: File; preview: string; isPrimary: boolean; uploaded?: string }[] = [];
+
+    for (const file of files) {
+      // Check file size (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        toast({
+          title: "Imagem muito grande",
+          description: `A imagem ${file.name} deve ter no máximo 10MB.`,
+          variant: "destructive",
+        });
+        continue;
+      }
+
+      // Create preview
+      const preview = URL.createObjectURL(file);
+      newImages.push({
+        file,
+        preview,
+        isPrimary: images.length === 0 && newImages.length === 0, // First image is primary
+        uploaded: undefined
+      });
+    }
+
+    setImages(prev => [...prev, ...newImages]);
+  };
+
+  const removeImage = (index: number) => {
+    setImages(prev => {
+      const newImages = prev.filter((_, i) => i !== index);
+      // If we removed the primary image, make the first image primary
+      if (prev[index].isPrimary && newImages.length > 0) {
+        newImages[0].isPrimary = true;
+      }
+      return newImages;
+    });
+  };
+
+  const setPrimaryImage = (index: number) => {
+    setImages(prev =>
+      prev.map((img, i) => ({
+        ...img,
+        isPrimary: i === index,
+      }))
+    );
+  };
+
+  const uploadNewImages = async () => {
+    const imagesToUpload = images.filter(img => img.file && !img.uploaded);
+    if (imagesToUpload.length === 0) return [];
+
+    setUploading(true);
+    const uploadedUrls: string[] = [];
+
+    try {
+      for (const image of imagesToUpload) {
+        if (!image.file) continue;
+
+        // Compress image
+        const compressedDataUrl = await compressImage(image.file);
+        const base64 = compressedDataUrl.split(',')[1];
+        
+        const response = await userAuth.apiCall('/api/upload/image', {
+          method: 'POST',
+          body: JSON.stringify({
+            imageData: base64,
+            fileName: image.file.name
+          })
+        });
+
+        if (response.imageUrl) {
+          uploadedUrls.push(response.imageUrl);
+          // Update the image state with uploaded URL
+          setImages(prev => prev.map(img => 
+            img === image ? { ...img, uploaded: response.imageUrl } : img
+          ));
+        }
+      }
+
+      return uploadedUrls;
+    } catch (error: any) {
+      console.error("Error uploading images:", error);
+      toast({
+        title: "❌ Erro no upload",
+        description: "Não foi possível fazer upload de algumas imagens.",
+        variant: "destructive",
+      });
+      throw error;
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const updateAdMutation = useMutation({
     mutationFn: async (data: InsertAd) => {
@@ -183,92 +348,36 @@ export default function EditAd() {
     );
   }
 
-  const onSubmit = (data: InsertAd) => {
-    const payload = {
-      ...data,
-      imageUrl: imagePreview || undefined,
-    };
-    
-    updateAdMutation.mutate(payload);
-  };
-
-  const compressImage = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const img = new Image();
+  const onSubmit = async (data: InsertAd) => {
+    try {
+      // Upload any new images first
+      await uploadNewImages();
       
-      img.onload = () => {
-        const maxSize = 1200;
-        let { width, height } = img;
-        
-        if (width > height) {
-          if (width > maxSize) {
-            height = (height * maxSize) / width;
-            width = maxSize;
-          }
-        } else {
-          if (height > maxSize) {
-            width = (width * maxSize) / height;
-            height = maxSize;
-          }
+      // Get all image URLs (existing and newly uploaded)
+      let primaryImageUrl = undefined;
+      let allImageUrls: string[] = [];
+      
+      if (images.length > 0) {
+        allImageUrls = images.map(img => img.uploaded!).filter(Boolean);
+        const primaryImage = images.find(img => img.isPrimary);
+        if (primaryImage) {
+          primaryImageUrl = primaryImage.uploaded;
         }
-        
-        canvas.width = width;
-        canvas.height = height;
-        
-        ctx?.drawImage(img, 0, 0, width, height);
-        const compressed = canvas.toDataURL('image/jpeg', 0.8);
-        resolve(compressed);
+      }
+      
+      const payload = {
+        ...data,
+        imageUrl: primaryImageUrl, // Keep for backwards compatibility
+        images: allImageUrls, // Send all images to backend
       };
       
-      img.onerror = reject;
-      img.src = URL.createObjectURL(file);
-    });
-  };
-
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 10 * 1024 * 1024) {
-        toast({
-          title: "Imagem muito grande",
-          description: "A imagem deve ter no máximo 10MB. Tente usar uma imagem menor.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      try {
-        const compressedDataUrl = await compressImage(file);
-        const base64 = compressedDataUrl.split(',')[1];
-        
-        const response = await userAuth.apiCall('/api/upload/image', {
-          method: 'POST',
-          body: JSON.stringify({
-            imageData: base64,
-            fileName: file.name
-          })
-        });
-
-        setImagePreview(response.imageUrl);
-        toast({
-          title: "📸 Imagem carregada!",
-          description: "Sua imagem foi otimizada e está pronta.",
-          duration: 2000,
-        });
-      } catch (error: any) {
-        console.error("Error uploading image:", error);
-        
-        toast({
-          title: "❌ Erro no upload",
-          description: "Não foi possível carregar a imagem. Tente novamente.",
-          variant: "destructive",
-          duration: 3000,
-        });
-      }
+      updateAdMutation.mutate(payload);
+    } catch (error) {
+      // Error already shown in uploadNewImages
+      return;
     }
   };
+
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -403,40 +512,75 @@ export default function EditAd() {
               </div>
               
               <div>
-                <Label htmlFor="image" className="text-sm font-medium">
-                  Foto do produto (opcional)
+                <Label className="text-sm font-medium">
+                  Fotos do produto (opcional) - Máximo 6 fotos
                 </Label>
-                <div className="mt-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-8 text-center hover:border-emerald-600 transition-colors cursor-pointer">
+                
+                {/* Upload Area */}
+                <div className="mt-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6 text-center hover:border-emerald-600 transition-colors cursor-pointer">
                   <input
-                    id="image"
+                    id="images"
                     type="file"
                     accept="image/*"
-                    onChange={handleImageUpload}
+                    multiple
+                    onChange={handleImagesUpload}
                     className="hidden"
                   />
-                  <label htmlFor="image" className="cursor-pointer">
-                    {imagePreview ? (
-                      <div className="space-y-2">
-                        <img
-                          src={imagePreview}
-                          alt="Preview"
-                          className="mx-auto h-40 w-40 object-cover rounded-lg"
-                        />
-                        <p className="text-emerald-600 text-sm">Clique para alterar a foto</p>
-                      </div>
-                    ) : (
-                      <>
-                        <CloudUpload className="mx-auto h-16 w-16 text-gray-400 mb-4" />
-                        <p className="text-gray-500 dark:text-gray-400 mb-2">
-                          Clique para adicionar uma foto
-                        </p>
-                        <p className="text-sm text-gray-400">
-                          PNG, JPG até 10MB (otimização automática)
-                        </p>
-                      </>
-                    )}
+                  <label htmlFor="images" className="cursor-pointer">
+                    <CloudUpload className="mx-auto h-12 w-12 text-gray-400 mb-3" />
+                    <p className="text-gray-500 dark:text-gray-400 mb-1">
+                      Clique para adicionar fotos
+                    </p>
+                    <p className="text-sm text-gray-400">
+                      PNG, JPG até 10MB cada ({images.length}/6)
+                    </p>
                   </label>
                 </div>
+
+                {/* Image Grid */}
+                {images.length > 0 && (
+                  <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    {images.map((image, index) => (
+                      <div key={index} className="relative group">
+                        <div className={`relative rounded-lg overflow-hidden border-2 transition-colors ${
+                          image.isPrimary ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20' : 'border-gray-200 dark:border-gray-600'
+                        }`}>
+                          <img
+                            src={image.preview}
+                            alt={`Preview ${index + 1}`}
+                            className="w-full h-24 object-cover"
+                          />
+                          {image.isPrimary && (
+                            <div className="absolute top-1 left-1 bg-emerald-500 text-white text-xs px-2 py-1 rounded-md font-medium">
+                              Principal
+                            </div>
+                          )}
+                          {image.uploaded && (
+                            <div className="absolute top-1 right-8 bg-green-500 text-white text-xs px-2 py-1 rounded-md">
+                              ✓
+                            </div>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => removeImage(index)}
+                            className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                          >
+                            ×
+                          </button>
+                        </div>
+                        {!image.isPrimary && (
+                          <button
+                            type="button"
+                            onClick={() => setPrimaryImage(index)}
+                            className="mt-1 text-xs text-emerald-600 hover:text-emerald-700 font-medium"
+                          >
+                            Definir como principal
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
               
               <div className="flex space-x-4 pt-4">
@@ -450,14 +594,19 @@ export default function EditAd() {
                 </Button>
                 <Button
                   type="submit"
-                  disabled={updateAdMutation.isPending}
+                  disabled={updateAdMutation.isPending || uploading}
                   className={`flex-1 transition-all duration-200 ${
-                    updateAdMutation.isPending 
+                    updateAdMutation.isPending || uploading
                       ? "bg-blue-400 cursor-not-allowed" 
                       : "bg-blue-600 hover:bg-blue-700 active:bg-blue-800"
                   } text-white shadow-md hover:shadow-lg active:shadow-sm`}
                 >
-                  {updateAdMutation.isPending ? (
+                  {uploading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Enviando fotos...
+                    </>
+                  ) : updateAdMutation.isPending ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
                       Salvando...
